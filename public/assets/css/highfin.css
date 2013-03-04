@@ -1,0 +1,14 @@
+/* elements marked for clearing  when rendering templates
+	note: they may be unmarked and not cleared depending on various factors;
+	but while they're marked they'll take on these css properties
+	so you can move them out the way or disappear them.
+ */
+.toclear {
+	opacity: 0;
+	height: 0px;
+	width: 0px;
+}
+
+.ajaxformiframe {
+	display: none;
+}
