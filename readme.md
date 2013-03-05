@@ -1,10 +1,6 @@
 # HighFin.js - Lightening Fast Overview
 HighFin.js is a flexible and configurable Javascript framework. Built on Node.js for building next generation client-side apps, fast.
 
-Get the most out of your hires by letting them own features front and back-end without context switching between languages.
-
-"Advanced, super fast templating engine designed for logic centric and/or text centric templates on a case by case basis"
-
 **Table of Contents**
 - High-level Overview
 - Installation
@@ -28,7 +24,6 @@ Get the most out of your hires by letting them own features front and back-end w
 	
 
 
-
 ## Installation
 1. Install [Vitualbox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](http://www.vagrantup.com/)
 2. Clone highfin.js onto your hard drive
@@ -41,8 +36,10 @@ Get the most out of your hires by letting them own features front and back-end w
 8. Go open Chrome and enter `http://200.200.200.200` as the url
 9. start hacking
 
+
 ## Rebooting the VM
-If you run into trouble and need to reboot the vm, 
+If you run into trouble and need to reboot the vm:
+
 1. Type `exit` (if you're already sshed into it, otherwise just cd to the project folder on your host machine)
 2. Type `vagrant reload`
 3. This will configure ports properly, restart nginx, and reboot the VM.
@@ -50,82 +47,42 @@ If you run into trouble and need to reboot the vm,
 5. `node-dev /vagrant/node/high.js`
 6. back in businesss
 
-## Syntax highlighting in Sublime Text
-1. open /Users/[username]/Library/Application Support/Sublime Text 2/Packages/JavaScript/JavaScript.tmLanguage in a text editor
-2. find `<string>'</string>` 
-3. paste the following <dict> block after it
-
-			<dict>
-				<key>begin</key>
-				<string>`</string>
-				<key>beginCaptures</key>
-				<dict>
-					<key>0</key>
-					<dict>
-						<key>name</key>
-						<string>punctuation.definition.string.begin.js</string>
-					</dict>
-				</dict>
-				<key>end</key>
-				<string>`</string>
-				<key>endCaptures</key>
-				<dict>
-					<key>0</key>
-					<dict>
-						<key>name</key>
-						<string>punctuation.definition.string.end.js</string>
-					</dict>
-				</dict>
-				<key>name</key>
-				<string>string.quoted.single.js</string>
-				<key>patterns</key>
-				<array>
-					<dict>
-						<key>match</key>
-						<string>\\(x\h{2}|[0-2][0-7]{,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.)</string>
-						<key>name</key>
-						<string>constant.character.escape.js</string>
-					</dict>
-				</array>
-			</dict>
-
-
 
 
 ## Project Folder Overview
 	+---application
-	|	└---config.js    						( HighFin.js server configuration )
-	|   └---router.js    						( routes, url management )   
+	|	└---config.js    							( HighFin.js server configuration )
+	|   └---router.js    							( routes, url management )   
 	+---conf
 	|	└---dev
 	|   	└---etc
 	|   		└---nginx
 	|   			└---sites-available
-	|   				└---highfin-dev.conf    ( nginx config )
+	|   				└---highfin-dev.conf    	( nginx config )
 	|   	└---mongodb
-	|   		└---highfin     				( database name )
+	|   		└---highfin     					( database name )
 	|   			└---collection.bson    		( collection data )
 	+---node
 	|	└---node_modules
 	|   	└---node dependencies
 	|   └---high.js    							( server side HighFin.js library )
-	|   └---package.json    					( configure node dependencies )
+	|   └---package.json    						( configure node dependencies )
 	+---public
 	|	└---assets
 	|   	└---css
 	|   	└---imgs
 	|   	└---js
-	|   └---test_app    						( /test_app/ html files and folder structure )
-	|   	└---index.html   					( test_app's index file )
+	|   └---test_app    							( /test_app/ html files and folder structure )
+	|   	└---index.html   						( test_app's index file )
 	|	└---index.html    						( root index file )
-	+---templates    							( namespaced templates )
+	+---templates    							  ( namespaced templates )
 	|	└---home
 	|   	└---welcome.js    					( a primarily Javascript template )
-	|   	└---welcome2.html   				( a primarily HTML template )
-	|   	└---welcome3.fn.js  				( namespaced client-side function exports )
+	|   	└---welcome2.html   					( a primarily HTML template )
+	|   	└---welcome3.fn.js  					( namespaced client-side function exports )
 	|   └---test
 	|   	└---welcome.js    					( this template would be test_welcome )
-	+---Vagrantfile    							( Vagrant configuration )
+	+---Vagrantfile    							  ( Vagrant configuration )
 
 
 ## Multiple navigation paradigms out of the box.
@@ -141,10 +98,12 @@ If you run into trouble and need to reboot the vm,
 - so since we attach these modules into the "global" server object(which wouldn't normally be global only within the main high.js ie: local in the context of modules) the `this` keyword inside these modules now references the entire `high` object. so you get this functionality without having to do anything special in the modules themselves.
 
 ## Helper Functions
-- Execute any function with named variables.
+Available on both front and back-end:
+
+- Execute any function with named argument pairs.
 - Get and Set nodes in any object using a recursive dot.notation syntax that supports embedded foreign keys to the same or other objects.
 - A robust search that lets you find and return matching values or branches in any object.
-- Automatic next generation JSONP form handling with fallbacks.
+- Automatic next generation JSONP form handling with fallbacks for compatible ajax that supports file uploads cross platform.
 - a lot more...
 
 ## Templates
@@ -213,6 +172,49 @@ Unexpected token ILLEGAL
 is probably you not using backticks for strings correctly or forgetting to. you will get a console message indicating this, otherwise the illegal token will be printed in the console. if the template throws any other error, you'll see this in the console as well along with the file name, (template block id if an inline template) and line-number
 
 - If the form contains an input with the name 'submit', even if it's of type="submit" ajaxform will not work, because when it tries to trigger the form's submit event it will instead select the input and try call the input like a function which causes it to fail
+
+## Syntax highlighting in Sublime Text
+1. open /Users/[username]/Library/Application Support/Sublime Text 2/Packages/JavaScript/JavaScript.tmLanguage in a text editor
+2. find `<string>'</string>` 
+3. paste the following <dict> block after it
+
+			<dict>
+				<key>begin</key>
+				<string>`</string>
+				<key>beginCaptures</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>name</key>
+						<string>punctuation.definition.string.begin.js</string>
+					</dict>
+				</dict>
+				<key>end</key>
+				<string>`</string>
+				<key>endCaptures</key>
+				<dict>
+					<key>0</key>
+					<dict>
+						<key>name</key>
+						<string>punctuation.definition.string.end.js</string>
+					</dict>
+				</dict>
+				<key>name</key>
+				<string>string.quoted.single.js</string>
+				<key>patterns</key>
+				<array>
+					<dict>
+						<key>match</key>
+						<string>\\(x\h{2}|[0-2][0-7]{,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.)</string>
+						<key>name</key>
+						<string>constant.character.escape.js</string>
+					</dict>
+				</array>
+			</dict>
+
+
+
+
 
 ## Roadmap
 - support LESS and SASS out of the box
