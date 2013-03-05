@@ -1,7 +1,7 @@
 # Crowdfund
 Help us fund further development at [IndieGogo](http://www.indiegogo.com/projects/351631/x/2591917)
 
-# HighFin.js - Lightening Fast Overview
+# HighFin.js - Lightning Fast Overview
 HighFin.js is a flexible and configurable Javascript framework. Built on Node.js for building next generation client-side apps, fast.
 
 **Table of Contents**
@@ -126,7 +126,7 @@ The HighFin templating engine solves the above issues and adds more functionalit
 	- Logic heavy templates
 	- Function specific templates for automatically namespacing client-side functions
 	- You can choose to trade-off between speed of authoring, speed of rendering, or mix and match, and also nest templates as needed.
-- uses document.createElement and document fragments for lightening fast element manipulation before and/or after inserting into the DOM
+- uses document.createElement and document fragments for lightning fast element manipulation before and/or after inserting into the DOM
 - multiline strings in javascript using backticks \`string\`. 
 	- Quotes never have to be escaped.
 	- type faster with less Shift key action
