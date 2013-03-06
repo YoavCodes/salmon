@@ -28,7 +28,7 @@ HighFin.js is a flexible and configurable Javascript framework. Built on Node.js
 
 
 ## Installation
-1. Install [Vitualbox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](http://www.vagrantup.com/)
+1. Install [VirtualBox](https://www.virtualbox.org/wiki/Downloads) and [Vagrant](http://www.vagrantup.com/)
 2. Clone highfin.js onto your hard drive
 3. Open terminal and cd to the project folder
 4. Type `vagrant up`
