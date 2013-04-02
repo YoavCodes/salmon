@@ -375,7 +375,7 @@ fin = {
 	fn: { 
 
 	},
-	_meta: { // used by inkapp.js for storing generic/state data
+	_meta: { // used by highfin.js for storing generic/state data
 		templates: {
 
 		},
@@ -426,7 +426,7 @@ fin = {
 			}
 		}
 	},
-	util: { // inkapp utilities
+	util: { // highfin utilities
 		log: log, // shortcut for consistency with the backend
 		// function for getting a dot notation path of an object
 		// @obj_path: String, dot notation String eg: "data.meta.current_section.name"
@@ -608,7 +608,7 @@ fin = {
 
 					for (var i = 0; i < fin.settings.navigate[key][fin.settings.containers[c]].length; i++) {
 						var template_name = fin.settings.navigate[key][fin.settings.containers[c]][i]
-						log(key)
+						//log(key)
 						if(fin.settings.navigate[key][fin.settings.containers[c]][i].substring(0, 1) === "_") {
 							var template_name = fin.settings.navigate[key][fin.settings.containers[c]][i].substring(1, fin.settings.navigate[key][fin.settings.containers[c]][i].length)
 						}
@@ -617,14 +617,14 @@ fin = {
 						}
 						
 						var render = true;
-						log(fin.settings.navigate[key][fin.settings.containers[c]][i])
+						//log(fin.settings.navigate[key][fin.settings.containers[c]][i])
 						// if templatename is preceded with an underscore, check if it's already rendered
 						if(fin.settings.navigate[key][fin.settings.containers[c]][i].substring(0, 1) === "_") {
 							// remove underscore
-							log("don't re-render")
+							//log("don't re-render")
 							// check if already rendered
 							if($('.block_' + template_name).length > 0) {
-								log("not re-rendering")
+								//log("not re-rendering")
 								// remove from clear list
 								$('.block_' + template_name).removeClass('toclear')
 								render = false;
@@ -695,7 +695,7 @@ fin = {
 			}
 		},
 		/*
-		    if user accidentally navigates away, closes the tab, or otherwise. ask if they really want to close inkapp.
+		    if user accidentally navigates away, closes the tab, or otherwise. ask if they really want to close highfin.
 		*/
 		onbeforeunload: function (e) {
 		    e = e || window.event;
@@ -1233,7 +1233,7 @@ fin = {
 	        		log("*")
 	        		log("Error: Template ( " + template_name + " ) not found,")
 	        		log("Solve Error: there may be an error within the template that will be printed after this,")
-	        		log("Solve Error: if not, specify " + template_name + " within the navigate object when instantiating inkApp, either under a container or the async_templates array for any page so that it gets requested from the server at runtime.")
+	        		log("Solve Error: if not, specify " + template_name + " within the navigate object when instantiating HighFin, either under a container or the async_templates array for any page so that it gets requested from the server at runtime.")
 	        		log("*")
 	        	} else {
 	        		log("*")
@@ -1981,9 +1981,6 @@ $(document).ready(function(){
 
   	// fetch templates * will also trigger hashchange event
   	fin.util.fetchTemplates()
-
-  	// Trigger the event (useful on page load).
-  	//$(window).hashchange();
 
 	fin.util.loading(false)
 

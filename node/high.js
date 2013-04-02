@@ -233,7 +233,7 @@ high.config = $.extend(true, {}, {
 	_template_path: __dirname + "/../templates/", // requres trailing slash
 }, require(__dirname + "/../application/config.js").config)
 
-high.mongo = new mongoDB('inkapp', new server('localhost', 27017, {auto_reconnect: true, safe: false}));
+high.mongo = new mongoDB('highfin', new server('localhost', 27017, {auto_reconnect: true, safe: false}));
 
 // recursively load all application code onto the global high object
 high.bootstrap = (function(path) {
