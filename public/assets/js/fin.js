@@ -353,6 +353,9 @@ fin = {
 		navigate: {},
 		containers: [],
 		routes: {},
+		callbacks: {
+			afterNavCallback: undefined,
+		},
 		/* 
 			global form response handlers to override default behaviours
 			- specify per-form success/error handlers with the ce() function
@@ -564,13 +567,15 @@ fin = {
 
 
 			// google analytics track navigation
-			var key_to_path = "/"+key
+			var key_to_path = "/" + key
 			key_to_path = key_to_path.split('_')
 			for(var i=0; i<key_to_path.length; i++) {
 				key_to_path[i].replace(/^s$/, 'student').replace(/^p$/, 'professor')
 			}
 			key_to_path = key_to_path.join('/') 
-			//_gaq.push(['_trackPageview', key_to_path]);
+			if(typeof _gaq !== 'undefined') {
+				_gaq.push(['_trackPageview', key_to_path]);
+			}
 
 			
 
@@ -660,20 +665,13 @@ fin = {
 				}
 			}
 
-			//setupTextInputHinting()
-			/*
-			$('form').ajaxForm({
-				beforeSubmit: formValidator,
-				success: formSuccessHandler
-			});
-			*/
+			
 			// remove templates marked for clear
 			$('.toclear').remove()
 
-			//$('select.select2').select2()
-			//$('table.tablesorter').tablesorter( {sortList: [[0,0]]} );
-			//$('.datepicker').datepicker();
-
+			if(typeof fin.settings.callbacks.afterNavCallback !== 'undefined') {
+				fin.settings.callbacks.afterNavCallback()
+			}
 			
 
 

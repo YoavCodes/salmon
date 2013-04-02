@@ -1,0 +1,43 @@
+<h1>Syntax highlighting in Sublime Text</h1>
+<p>
+	<ul>
+		<li>1. open <span class="prettyprint">/Users/[username]/Library/Application Support/Sublime Text/Packages/JavaScript/JavaScript.tmLanguage"</span> in a text editor</li>
+		<li>2. find <span class="prettyprint">'</span> </li>
+		<li>3. paste the following <dict> block after it</li>
+	</ul>
+</p>
+<pre class="prettyprint lang-xml">
+&lt;dict&gt;
+	&lt;key&gt;begin&lt;/key&gt;
+	&lt;string&gt;\`&lt;/string&gt;
+	&lt;key&gt;beginCaptures&lt;/key&gt;
+	&lt;dict&gt;
+		&lt;key&gt;0&lt;/key&gt;
+		&lt;dict&gt;
+			&lt;key&gt;name&lt;/key&gt;
+			&lt;string&gt;punctuation.definition.string.begin.js&lt;/string&gt;
+		&lt;/dict&gt;
+	&lt;/dict&gt;
+	&lt;key&gt;end&lt;/key&gt;
+	&lt;string&gt;\`&lt;/string&gt;
+	&lt;key&gt;endCaptures&lt;/key&gt;
+	&lt;dict&gt;
+		&lt;key&gt;0&lt;/key&gt;
+		&lt;dict&gt;
+			&lt;key&gt;name&lt;/key&gt;
+			&lt;string&gt;punctuation.definition.string.end.js&lt;/string&gt;
+		&lt;/dict&gt;
+	&lt;/dict&gt;
+	&lt;key&gt;name&lt;/key&gt;
+	&lt;string&gt;string.quoted.single.js&lt;/string&gt;
+	&lt;key&gt;patterns&lt;/key&gt;
+	&lt;array&gt;
+		&lt;dict&gt;
+			&lt;key&gt;match&lt;/key&gt;
+			&lt;string&gt;\\(x\h{2}|[0-2][0-7]{,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.)&lt;/string&gt;
+			&lt;key&gt;name&lt;/key&gt;
+			&lt;string&gt;constant.character.escape.js&lt;/string&gt;
+		&lt;/dict&gt;
+	&lt;/array&gt;
+&lt;/dict&gt;
+</pre>	

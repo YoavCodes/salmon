@@ -1,0 +1,32 @@
+<h1>Templating Overview</h1>
+
+<h2>HighFin Templates</h2>
+
+<p>HighFin supports 3 kinds of templates which are labelled using different file extensions or script block types. When HighFinjs is instantiated on the front-end it will parse the dependency tree and fetch all templates from the server. This typically takes only a few milliseconds. Use script blocks to make a template available immediately before that request is sent and define a template as both a script block and a template file to have it replaced once templates are retrieved from the server.</p>
+
+<pre class="prettyprint lang-html">
+&lt;!-- inline script block types --&gt;
+&lt;script type="text/template-html"&gt;&lt;/script&gt;
+&lt;script type="text/template-js"&gt;&lt;/script&gt;
+&lt;script type="text/template-fnjs"&gt;&lt;/script&gt;
+
+&lt;!-- template file extension types --&gt;
+template-name.html
+template-name.js
+template-name.fnjs
+<!-- -->
+</pre> 
+
+<p>Html templates are designed for speed of authoring. Js templates are designed for speed of execution and logic centric markup. Both of these template types are executed when the template is rendered. Fnjs or "Function" templates are executed when the template is cached. In both Js and Fnjs templates you can use an <code class="prettyprint">exports</code> syntax to take advantage of automatic global namespacing.</p>
+
+<p>Because strings are delineated using backticks, quotes and apostrophes never need be escaped and multiline strings can be used to maintain code formatting with no need to close or concatenate lines.</p>
+
+<p>Templates can be nested as needed, and the Js and Html template notation can be used in either template file type under certain conditions as all templates are parsed in a derivative way. Within Html templates and backtick delineated strings in Js/Fnjs templates you may use {<b></b>{ vars }<b></b>} that can access the global front-end data model and multiline [<b></b>[ arbitrary_js() ]<b></b>] which have access to the template's DOM elements as soon as they're rendered.</p>
+
+<p>The Javascript template notation exploits document.createElement and document fragments for lightning fast element manipulation before and/or after inserting into the DOM. Javascript notation also promotes an indentation and nesting structure that's new, refreshing, and easy to read. Attaching jQuery event listeners is easy and intuitive as well, you can bind events to the document fragment element variables directly removing some DOM clutter in the form or IDs and Classes. Event listeners defined this way can easily be passed a reference to the element along with other scoped data to the event handlers.</p>
+
+<h2>HighFin templates fix common issues that other engines face</h2>
+<p>With other engines attaching event listeners tends to require having ids or class names for each element and writing a <code>&lt;script text/javascript&gt;</code> block within the template with a setTimeout(function(){},0) to ensure it's executed after the template html is rendered and inserted in the DOM &mdash; depending on the type of event delegation and functionality required.</p>
+<p>Other engines tend to require a complex intertwining of markup and logic peppered with &lt;% %&gt; tags to distinguish code from markup especially when you want group code by thought, in these cases the template is not executed in the same way it's written. This can lead to bugs.</p>
+<p>Other engines that rely on parsing html strings are slower to render than a pure javascript approach.</p>
+<p>Other engines typically lose stack trace information when errors occur inside templates</p>
