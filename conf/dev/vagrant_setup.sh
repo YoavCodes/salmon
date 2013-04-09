@@ -5,7 +5,7 @@ USER_HOME=/home/vagrant
 
 # TODO: nodejs is compiled and installed because the repository version is too old. When it reaches 0.8.x we can install it from apt.
 # TODO: npm might need to be installed explicitely if using apt.
-NODE_VERSION=0.8.11
+NODE_VERSION=0.10.3
 
 ##
 #	Execute only the first time the virtual machine is started

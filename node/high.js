@@ -32,7 +32,7 @@ var http = require('http');
 	inspect = require('util').inspect;
 	sys = require('sys');
 	pump = require('util').pump;
-	$ = require('jquery');
+	$ = require('jquery-latest');
 	
 /*
 	// form handling
