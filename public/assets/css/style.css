@@ -21,7 +21,7 @@ html {
 body {
 	width: 1100px;
 	margin: 0 auto;
-	background: url(../imgs/content_bg.png);
+	background: url(../imgs/content_bg.png?_CACHE_CONTROL_=1365544199427);
 }
 
 .hidden {

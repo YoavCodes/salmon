@@ -221,9 +221,82 @@ high = {
 					return new Date().toString();
 					break;	
 				
+			} 
+		},
+		// recursively operate on every file in a folder and its subfolders
+		// @folders: array of string folder paths
+		// @callback: function to call on every file, the callback gets two arguments
+				// @file_name: string name of the file
+				// @root_path: string full root path of the file not including the file_name, so root_path + file_name = full path to file
+		loopOverFolders: function loopOverFolders(folders, callback) {
+			if(typeof folders === 'undefined') {
+				return
+			}
+
+			var root_path = "";
+			for(var j = 0; j < folders.length; j++) {
+				root_path = folders[j];	
+				if(fs.statSync(root_path).isDirectory() === false) {
+					continue;
+				}
+				(function(rel_path){
+					if(typeof rel_path === 'undefined') {
+						rel_path = ""
+					}  
+					var _path = root_path + rel_path;					
+					var folder_contents = fs.readdirSync(_path)
+					for(var i = 0; i < folder_contents.length; i++) {
+						var file_name = folder_contents[i];
+						// ignore dot files
+						if(file_name.charAt(0) === ".") {
+							continue
+						}
+						if(fs.statSync(_path + file_name).isDirectory() === true) {
+							// it's a folder, so call this function again for the newly discovered folder
+							arguments.callee(rel_path + file_name + "/")
+						} else {							
+							callback(file_name, _path)
+						}
+					}
+				})("")
 			}
 		},
-
+		// update client-side cache control _CACHE_CONTROL=timestamp
+		updateCacheControl: function updateCacheControl() {	
+			var timestamp = new Date().getTime();
+			high.util.loopOverFolders([high.config._public_path, high.config._template_path], function(file_name, root_path) {
+				// modify .html, .js, and .css files.
+				if(file_name.match(/.html$|.js$|.css$/)) {								
+					var file_contents = fs.readFileSync(root_path + file_name, {'encoding': 'utf8'});								
+					file_contents = file_contents.replace(/_CACHE_CONTROL_=[0-9]+/g, "_CACHE_CONTROL_=" + timestamp);
+					fs.writeFileSync(root_path + file_name, file_contents, {'encoding': 'utf8'})
+				}
+			})										
+		},
+		// recursively load all application code onto the global high object
+		loadServerCode: function loadServerCode(path) {
+			// load server-side application code
+			var _path = high.config._application_path + "apps/"
+			high.util.loopOverFolders([high.config._application_path + "apps/"], function(file_name, root_path) {
+				// load .js files 
+				if(file_name.match(/.js$/)) {
+					var object_path_array = String(root_path + file_name).replace(/js$/, '').split('/');
+					var object_branch = high.apps;
+					
+					for(var j=0; j<object_path_array.length; j++) {
+						if(j === object_path_array.length-1) {
+							object_branch[object_path_array[j]] = require(root_path + file_name)
+						} else {
+							if(typeof object_branch[object_path_array[j]] === 'undefined') {
+								object_branch[object_path_array[j]] = {};
+							}
+							object_branch = object_branch[object_path_array[j]]
+						}
+					} 
+				} 
+			})							
+		}
+		
 	}
 }
 
@@ -231,49 +304,24 @@ high.config = $.extend(true, {}, {
 	_templates: {}, // used for storing the cached templates
 	_application_path: __dirname + "/../application/",
 	_template_path: __dirname + "/../templates/", // requres trailing slash
+	_public_path: __dirname + "/../public/",
 }, require(__dirname + "/../application/config.js").config)
 
 high.mongo = new mongoDB('highfin', new server('localhost', 27017, {auto_reconnect: true, safe: false}));
 
-// recursively load all application code onto the global high object
-high.bootstrap = (function(path) {
+
+high.bootstrap = (function() {
+	// load router
 	high.router = require(high.config._application_path + 'router.js').router;	
 
-	var _path = high.config._application_path + "apps/"
-	if(typeof path === 'undefined') {
-		path = ""
-	}
-	_path += path; 
-	var folder_contents = fs.readdirSync(_path)
-	for(var i = 0; i < folder_contents.length; i++) {
-		// ignore .files
-		if(folder_contents[i].charAt(0) === ".") {
-			continue
-		}
 
-		// load .js files 
-		if(folder_contents[i].match('.js')) {
-			var file_path = folder_contents[i];
-			var object_path_array = String(path + file_path).replace('.js', '').split('/');
-			var object_branch = high.apps;
-			
-			for(var j=0; j<object_path_array.length; j++) {
-				if(j === object_path_array.length-1) {
-					object_branch[object_path_array[j]] = require(_path + file_path)
-				} else {
-					if(typeof object_branch[object_path_array[j]] === 'undefined') {
-						object_branch[object_path_array[j]] = {};
-					}
-					object_branch = object_branch[object_path_array[j]]
-				}
-			}
+	high.util.updateCacheControl()
 
-		} else {
-			// it's a folder, so call this function again for that folder
-			arguments.callee(path + folder_contents[i] + "/")
-		}
-	} 
+	high.util.loadServerCode()
+
+	
 })()
+
 
 
 
