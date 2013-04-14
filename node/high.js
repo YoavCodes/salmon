@@ -25,14 +25,16 @@ process.on('uncaughtException', function(e){
 /*
 	// load dependencies
 */
-var http = require('http');
-	fs = require('fs');
- 	querystring = require('querystring');
- 	path = require('path');
-	inspect = require('util').inspect;
-	sys = require('sys');
-	pump = require('util').pump;
-	$ = require('jquery-latest');
+var http = require('http'),
+	fs = require('fs'),
+ 	querystring = require('querystring'),
+ 	path = require('path'),
+	inspect = require('util').inspect,
+	sys = require('sys'),
+	pump = require('util').pump,
+	$ = require('jquery-latest'),
+	less = require('less');
+	
 	
 /*
 	// form handling
@@ -139,7 +141,7 @@ high = {
 			@input - html string
 			@allowed "b,i", comma separated string of alloweable tags
 		*/
-		strip_tags: function(input, allowed) {
+		strip_tags: function strip_tags(input, allowed) {
 			if(input == undefined) {
 				return "";	
 			}
@@ -165,7 +167,7 @@ high = {
 		/*
 			fast trim for leading and trailing whitespace
 		*/
-		trim: function(str) {
+		trim: function trim(str) {
 			str = str.replace(/^\s+/, '');
 			for (var i = str.length - 1; i >= 0; i--) {
 				if (/\S/.test(str.charAt(i))) {
@@ -180,7 +182,7 @@ high = {
 			@data - the data to validate
 			@type - the validator to use
 		*/			
-		validate: function(data, type) {
+		validate: function validate(data, type) {
 			if(typeof data === 'undefined') {
 				return false
 			}
@@ -210,7 +212,7 @@ high = {
 			// get the current time as either a timestamp or UTC datestamp
 			@type - "time" or "date"
 		*/
-		currentTime: function(type) {
+		currentTime: function currentTime(type) {
 			switch(type) {
 				case "time":
 					// seconds passed the epoch, used for sorting and server side operations
@@ -228,9 +230,14 @@ high = {
 		// @callback: function to call on every file, the callback gets two arguments
 				// @file_name: string name of the file
 				// @root_path: string full root path of the file not including the file_name, so root_path + file_name = full path to file
-		loopOverFolders: function loopOverFolders(folders, callback) {
+				// @recursive: boolean: whether to recursively check subfolders or not
+		loopOverFolders: function loopOverFolders(folders, callback, recursive) {
 			if(typeof folders === 'undefined') {
 				return
+			}
+
+			if(typeof recursive === 'undefined') {
+				recursive = true;
 			}
 
 			var root_path = "";
@@ -251,7 +258,7 @@ high = {
 						if(file_name.charAt(0) === ".") {
 							continue
 						}
-						if(fs.statSync(_path + file_name).isDirectory() === true) {
+						if(fs.statSync(_path + file_name).isDirectory() === true && recursive === true) {							
 							// it's a folder, so call this function again for the newly discovered folder
 							arguments.callee(rel_path + file_name + "/")
 						} else {							
@@ -266,15 +273,15 @@ high = {
 			var timestamp = new Date().getTime();
 			high.util.loopOverFolders([high.config._public_path, high.config._template_path], function(file_name, root_path) {
 				// modify .html, .js, and .css files.
-				if(file_name.match(/.html$|.js$|.css$/)) {								
+				if(file_name.match(/.html$|.js$|.css$|.less$/)) {								
 					var file_contents = fs.readFileSync(root_path + file_name, {'encoding': 'utf8'});								
 					file_contents = file_contents.replace(/_CACHE_CONTROL_=[0-9]+/g, "_CACHE_CONTROL_=" + timestamp);
 					fs.writeFileSync(root_path + file_name, file_contents, {'encoding': 'utf8'})
 				}
 			})										
 		},
-		// recursively load all application code onto the global high object
-		loadServerCode: function loadServerCode(path) {
+		// recursively load all server-side application code onto the global high object
+		loadServerCode: function loadServerCode() {
 			// load server-side application code
 			var _path = high.config._application_path + "apps/"
 			high.util.loopOverFolders([high.config._application_path + "apps/"], function(file_name, root_path) {
@@ -293,31 +300,126 @@ high = {
 							object_branch = object_branch[object_path_array[j]]
 						}
 					} 
-				} 
-			})							
-		}
-		
-	}
-}
+				}       
+			})			 	   		 	 
+		},           
+		// compile and compress css
+		compileCompressCSS: function compileCompressCSS() {
+			high.util.loopOverFolders([high.config._less_path], function(file_name, root_path) {				
+				// LESS 
+				if(file_name.match(/.less$/)){
+					var parser = new(less.Parser)({
+					    paths: [high.config._less_path], // Specify search paths for @import directives
+					    filename: file_name // Specify a filename, for better error messages
+					})
+					var file_contents = fs.readFileSync(root_path + file_name, {'encoding': 'utf8'});
+					parser.parse(file_contents, function(err, tree) {
+						if(err) {
+							log(err)
+							return
+						}
+						var less_config,
+							compiled_file_contents;
 
+						if(high.config.env === 'dev') {
+							less_config = high.config.less.dev;
+						} else {
+							less_config = high.config.less.prod;
+						}
+						compiled_file_contents = tree.toCSS(less_config)						
+						fs.writeFileSync(root_path.replace(/\/less\//, '/css/') + file_name.replace(/.less$/, ".css"), compiled_file_contents, {'encoding': 'utf8'})
+					})
+				}  
+			}, false)  
+		},
+		// fetch templates
+		getTemplates: function getTemplates(fields, res){
+			// template_list is a list of templates needed for the page to function
+			var template_list = [];
+			var template_name_onclient;
+			if(typeof fields.template_list !== 'undefined') {
+				template_list = fields.template_list.split(',') // convert string back into array
+				res.response['templates'] = {}
+				// get templates
+				for(var i=0; i<template_list.length; i++) {
+					var template_name = template_list[i];
+					// if the template is undefined or we're in development mode, get the template from the file system
+					if(typeof high.config._templates[template_name] === 'undefined' || high.config.env === 'dev') {
+						// not in cache, so grab it from the file system
+						var file_path = high.config._template_path + template_name.replace(/_/g, '/');
+
+						// check if .js or .html template
+						// we favour .js templates in cases where a .js and .html template both exist with the same name
+						var ext = ""
+						if(fs.existsSync(file_path + '.js')) {
+							ext = "js"
+						} 
+						if(fs.existsSync(file_path + '.html')) {
+							ext = "html"
+						} 
+						if(fs.existsSync(file_path + '.fn.js')) {
+							ext = "fn.js"
+						}
+						file_path += "." + ext
+						template_name_onclient = template_name + "-" + ext
+
+						try { 
+							high.config._templates[template_name] = {template: JSON.stringify(fs.readFileSync(file_path, 'utf8')), ext: ext}						
+						} catch(err) {
+							// template wasn't found
+							// make sure it's no longer in the cache
+							delete high.config._templates[template_name]
+							log("*")
+							log("Error: Template ( " + template_name + " ) not found,") 
+							log("Solve Error: create "+ template_name.replace(/.*_/, "") +".js OR "+template_name.replace(/.*_/, "")+".html in ( " + file_path.replace(/[a-z_\.]*$/, "").replace(/[a-z]*\/\.\.\//, "") + ")")
+							log("*")
+						}
+					} else {
+						template_name_onclient = template_name + '-' + high.config._templates[template_name].ext
+					}
+					// if the template is not in the cache now, the file wasn't found with any of the valid extensions, 
+					// template is in cache so grab it from the cache
+					res.response.templates[template_name_onclient] = high.config._templates[template_name].template
+					
+				}
+			}
+		}  
+		    
+	}
+}  
+ 
 high.config = $.extend(true, {}, {
 	_templates: {}, // used for storing the cached templates
 	_application_path: __dirname + "/../application/",
 	_template_path: __dirname + "/../templates/", // requres trailing slash
 	_public_path: __dirname + "/../public/",
+	_css_path: __dirname + "/../public/assets/css/",
+	_less_path: __dirname + "/../public/assets/less/",
+	less: {
+		dev: {
+			compress: false,
+			yuicompress: false,
+
+		},
+		prod: {
+			yuicompress: true,
+		}
+	}
 }, require(__dirname + "/../application/config.js").config)
 
-high.mongo = new mongoDB('highfin', new server('localhost', 27017, {auto_reconnect: true, safe: false}));
-
+//high.mongo = new mongoDB('highfin', new server('localhost', 27017, {auto_reconnect: true, safe: false}));
 
 high.bootstrap = (function() {
 	// load router
 	high.router = require(high.config._application_path + 'router.js').router;	
 
+	high.util.compileCompressCSS();
 
-	high.util.updateCacheControl()
+	high.util.updateCacheControl();
 
-	high.util.loadServerCode()
+	high.util.loadServerCode();
+
+
 
 	
 })()
@@ -398,65 +500,12 @@ http.createServer(function (req, res) {
 		// hashbang is used for navigation
 		res['hashbang'] = "/"; // default
 		// command is used for non-url based actions
-		res['command'] = fields.command;
-		// template_list is a list of templates needed for the page to function
-		var template_list = [];
+		res['command'] = fields.command;		
 		if(typeof fields.hashbang !== 'undefined') {
 			hashbang = fields.hashbang;
 		}
 		// fetch templates if requested
-		if(typeof fields.template_list !== 'undefined') {
-			template_list = fields.template_list.split(',') // convert string back into array
-			res.response['templates'] = {}
-			// get templates
-			for(var i=0; i<template_list.length; i++) {
-				var template_name = template_list[i];
-				// if the template is undefined or we're in development mode, get the template from the file system
-				if(typeof high.config._templates[template_name] === 'undefined' || high.config.env === 'dev') {
-					// not in cache, so grab it from the file system
-					var file_path = high.config._template_path + template_name.replace(/_/g, '/');
-
-					// check if .js or .html template
-					// we favour .js templates in cases where a .js and .html template both exist with the same name
-					var ext = ""
-					if(fs.existsSync(file_path + '.js')) {
-						//log('is jas')
-						//log(fs.existsSync(file_path + '.js'))
-						ext = "js"
-					} 
-
-					if(fs.existsSync(file_path + '.html')) {
-						ext = "html"
-					} 
-					//log(fs.existsSync(file_path + '.fn.js'))
-					//log('hiiii')
-					if(fs.existsSync(file_path + '.fn.js')) {
-						//log('is fn')
-						//log(fs.existsSync(file_path + '.fn.js'))
-						ext = "fn.js"
-					}
-					file_path += "." + ext
-					template_name_onclient = template_name + "-" + ext
-					log(file_path)
-
-					try { 
-						high.config._templates[template_name] = JSON.stringify(fs.readFileSync(file_path, 'utf8'))						
-					} catch(err) {
-						// template wasn't found
-						// make sure it's no longer in the cache
-						delete high.config._templates[template_name]
-						log("*")
-						log("Error: Template ( " + template_name + " ) not found,") 
-						log("Solve Error: create "+ template_name.replace(/.*_/, "") +".js OR "+template_name.replace(/.*_/, "")+".html in ( " + file_path.replace(/[a-z_\.]*$/, "").replace(/[a-z]*\/\.\.\//, "") + ")")
-						log("*")
-					}
-				}
-				// if the template is not in the cache now, the file wasn't found with any of the valid extensions, 
-				// template is in cache so grab it from the cache
-				res.response.templates[template_name_onclient] = high.config._templates[template_name]
-				
-			}
-		}
+		high.util.getTemplates(fields, res)
 		
 		// keep a reference to segments
 		res['segments'] = hashbang.toString().split("/");
@@ -465,127 +514,3 @@ http.createServer(function (req, res) {
 	})
 }).listen(high.config.port, "127.0.0.1");
 	
-/*------------------------------------------------------------------------------------------
-DEFAULT
-------------------------------------------------------------------------------------------*/	
-/** 
-************** DEBUG *****************
-**/	
-
-function createDummyMongo(req, res, post) {
-	mongo.open(function(err, mongo) {
-		mongo.collection('news', function(err, newscollection) {
-		
-			var query = {uid: "1316644563987as9f"}; 
-			
-			var post1 = {
-					title: 'Post 1',
-					timestamp: '1316644563',
-					datestamp: 'Fri Jan 16 1970 00:44:04 GMT-0500 (EST)',
-					type: 'news',
-					url: '2011/09/post-1',
-					author: "Yoav Givati",
-					published: 1,
-					views: 489,
-					categories: [{	
-								name: "Apps",
-								slug: "apps"
-							},
-							{	
-								name: "Web",
-								slug: "web"
-							}],
-					tags: [{	
-								name: "Microsoft",
-								slug: "microsoft"
-							},
-							{	
-								name: "Google+",
-								slug: "google+"
-							}],
-					comments: [{	
-								author: "Yoav",
-								datestamp: 'Fri Jan 16 1970 00:44:04 GMT-0500 (EST)',
-								comment: "microsoft is a little soft latesly",
-								approved: 1
-							},{	
-								author: "Sue",
-								datestamp: 'Fri Jan 16 1970 00:44:04 GMT-0500 (EST)',
-								comment: "What what? oh yeah insane!!",
-								approved: 1
-							}],
-					post: '<p>You\'re a Web Developer, a polyglot, you\'ve easily worked with over 15 syntaxes across language and framework and you\'re on the cutting edge of the 5 being used in your current project. You don\'t sleep like normal people should and it\'s been way too long since you last shaved. You have a blog where you try give back to the dev community that brought you here, you have Twitter, Google Plus, and a loose idea of personal brand. You speak out against the misuse of copyright, patent, IE, and corporate monopoly. There\'s a focus on</p>/---/<p>efficiency but it\'s often misguided or misplaced. You try freelancing or working a 9-5 dev job at some factory, but you\'re full of ideas for projects and useful tools that wouldn\'t even be that hard to code if you just had the time. This is a post about why you can and should anyway.</p><h1>Freelancing Sucks</h1><p>Nine times out of ten your clients are hiring you because they can\'t do it themselves. It\'s worse than that; they don\'t even know what you actually do, they only know that they want a "site" and they need a "web developer" to "code" it. Clients are needy people, and have very</p>/---/<p>definite very wrong wants for UI and design. They want you to work as though they were your only client, and as though their\'s was your only project. They don\'t want to pay you though, and they won\'t pay you on time. The bigger the client the more opportunity they have to squeeze work out of you while not paying you on time. The cheque will either be in the mail, delayed by the accounting department until Nancy gets back from vacation to dual approve sending the cheque out, or someone else will be blamed for letting your </p>/---/<p>invoice slip through the cracks. Yeah you could tell them you won\'t write anymore code until you get the cheque but if you need to hit the next milestone and get the next cheque sooner rather than later, and the cheque is "on it\'s way", you might as well just keep coding.</p><p>Smaller clients will just disappear when it\'s invoice time. And in both cases you\'ll be left wondering if they even want the code. Sometimes after a client dragging the project out for months with disperse weeks of silence peppered with subtle revision requests they\'ll have a spontaneous and total change of heart and try dump the project without compensating you for work done. No matter how well you weather the gauntlet of providing a tailored service to people who fundamentally don\'t get it and can\'t appreciate it you\'ll have to start all over again with the next one. You\'ll have to handle several projects at once working ridiculous hours under ridiculous amounts of stress to offset inevitable dry spells and you\'ll never know where your next client is coming from or when.</p><p>The majority of your time will be spent on the business side of things, while you fight in one way or another for the privilege to do the thing you love; albeit in a hindered distorted fashion only to bust </p>/---/<p>your ass trying to meet obscure client demands.</p><p>There\'s no purity in freelance.</p><h1>Factory Farmed Code</h1><p>All companies are not Google. Your boss is not a programmer, she\'s a middle manager who stares at spreadsheets and gantt charts all day and who\'s only drive in life is to push you to meet deadlines reasonable only to the marketing, or business dev departments. You\'re not going to go in and have your ideas heard. You\'re not even going to be present at every relevant meeting. You\'re livestock. You are scheduled to have your soul removed and sterilized between the hours of 9am and 5pm every weekday, with frequent overtime. You\'re expected to work as hard as you can on a project that no one else you work with cares about off hours. You\'re expected to produce value for a company that doesn\'t care about you which far exceeds what you\'re being compensated and more importantly you\'re working on something you don\'t care about.</p><p>There\'s no purity in a factory.</p><h1>Leverage</h1><p>Life as a cog in someone else\'s machine is made harder with no external leverage. If you need that next paycheck you\'re going to have to stick it out and you\'re going to have to do a really good </p>/---/<p>job to make sure you get another one. If your employment is a chess game of contracts and balancing demand what you need is leverage; security, a safety net. In terms of the proverbial chess game you need a baseball bat to take out your opponent\'s rooks if things go pear shaped. You don\'t have to quit freelancing or tell your boss to hire some other sap to push brackets for the man, but you do need to know for yourself that it\'s a tangible option, and you need something of your own to grow and nurture. Something that resonates with your soul and your vision —your machine. Something pure.</p><p>What you need is to identify a market, create a solid(read: static, one-size-fits-all) product or service, pick a price point, and let it sell itself with an occasional marketing push.</p><p>You don\'t just need this for the money. You need this to maintain sanity. You need this for freedom. And you need this for purity.</p><p>So take an hour a day and start looking at the different platforms desperate for you to innovate. iOS, Android, Blackberry, AIR, browser plugins, server software, developer tools, the web. Markets already exist, the platforms exist, the creation tools are there. Play with some </p>/---/<p>apps and see how you\'d execute and implement better. Talk to users and see what needs aren\'t being adequately met and just build something. You don\'t need the perfect domain name, although try avoid hyphens, you don\'t need a whole team working on generating perfect copy and high impact design, just focus on function and usability and get a working version in front of somebody. You won\'t be sorry. It will not be time wasted.</p>',					
-					leadgallery: [{
-							type: 'image',
-							img: '/assets/imgs/test2.png',
-							full: '/assets/imgs/test4.jpeg',
-							caption: 'hi <a href="http://yoavgivati.com">test</a> test test..jaksfljas',
-						}],
-				
-				};
-				
-			var post2 = {
-					title: 'Post 2',
-					timestamp: '1316644575',
-					datestamp: 'Fri Jan 16 1970 00:34:04 GMT-0500 (EST)',
-					type: 'news',
-					url: '2011/09/post-2',
-					author: "Yoav Givati",
-					published: 0,
-					views: 500,
-					categories: [],
-					tags: [],
-					post: 'Hi this is a post',
-					leadgallery: [{
-							type: 'youtube',
-							youtube: 'PMZ5s7o2F88'
-						}]
-				
-				};
-				
-			var post3 = {
-					title: 'Post 3',
-					timestamp: '1316644581',
-					datestamp: 'Fri Jan 16 1970 00:44:04 GMT-0100 (EST)',
-					type: 'news',
-					url: '2011/09/post-3',
-					author: "Yoav Givati",
-					published: 1,
-					views: 500,
-					categories: [],
-					tags: [],
-					post: 'asdfsdf',
-					leadgallery: [{
-							type: 'image',
-							img: '/assets/imgs/test3.png',
-							full: '/assets/news/uploads/img1-full.jpg',
-						}],
-				
-				};
-
-			newscollection.remove({}, function() {
-
-				newscollection.insert(post1, function() {
-								
-					newscollection.insert(post2, function() {
-				
-						newscollection.insert(post3, function() {
-					
-							if(req.connection.destroyed == false) {
-								if(err) {
-									res.write('error: '+err);	
-								}
-								if(res) {
-									
-										mongo.close()
-									res.end('Dummy Database Recreated');
-								}					
-							}
-						})
-					})				
-				})		
-			})
-		})
-	})
-
-}

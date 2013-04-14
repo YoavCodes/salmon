@@ -5,7 +5,11 @@ exports.config = {
 	port: 8200,
 	/*
 		'dev':
-			- disable template caching
+			- will disable template caching
+			- will not compress compiled LESS
+		'staging / prod':
+			- templates are cached after they're first fetched
+			- LESS is compiled and then YUI compressed
 	*/
 	
 }
