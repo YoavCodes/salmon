@@ -230,14 +230,18 @@ high = {
 		// @callback: function to call on every file, the callback gets two arguments
 				// @file_name: string name of the file
 				// @root_path: string full root path of the file not including the file_name, so root_path + file_name = full path to file
-				// @recursive: boolean: whether to recursively check subfolders or not
-		loopOverFolders: function loopOverFolders(folders, callback, recursive) {
+				// @isDirectory: boolean
+		// @recursive: boolean: whether to recursively check subfolders or not
+		// @callback_on: 'files', 'folders', 'both' when to trigger a callback
+		loopOverFolders: function loopOverFolders(folders, callback, recursive, callback_on) {			
 			if(typeof folders === 'undefined') {
 				return
 			}
-
 			if(typeof recursive === 'undefined') {
 				recursive = true;
+			}			
+			if(typeof callback_on === 'undefined') {
+				callback_on = 'files'
 			}
 
 			var root_path = "";
@@ -258,11 +262,21 @@ high = {
 						if(file_name.charAt(0) === ".") {
 							continue
 						}
-						if(fs.statSync(_path + file_name).isDirectory() === true && recursive === true) {							
-							// it's a folder, so call this function again for the newly discovered folder
-							arguments.callee(rel_path + file_name + "/")
-						} else {							
-							callback(file_name, _path)
+						var isDirectory = fs.statSync(_path + file_name).isDirectory();
+
+						if(isDirectory === true) {	
+							if(callback_on === "folders" || callback_on === "both") {
+								callback(file_name, _path, true)
+							}
+
+							// call this function again for the newly discovered folder
+							if(recursive === true) {
+								arguments.callee(rel_path + file_name + "/")
+							}
+						} else {
+							if(callback_on === "files" || callback_on === "both") {
+								callback(file_name, _path, false)
+							}
 						}
 					}
 				})("")
@@ -312,7 +326,7 @@ high = {
 					    paths: [high.config._less_path], // Specify search paths for @import directives
 					    filename: file_name // Specify a filename, for better error messages
 					})
-					var file_contents = fs.readFileSync(root_path + file_name, {'encoding': 'utf8'});
+					var file_contents = fs.readFileSync(root_path + file_name, {'encoding': 'utf8'});					
 					parser.parse(file_contents, function(err, tree) {
 						if(err) {
 							log(err)
@@ -327,7 +341,7 @@ high = {
 							less_config = high.config.less.prod;
 						}
 						compiled_file_contents = tree.toCSS(less_config)						
-						fs.writeFileSync(root_path.replace(/\/less\//, '/css/') + file_name.replace(/.less$/, ".css"), compiled_file_contents, {'encoding': 'utf8'})
+						fs.writeFileSync(root_path.replace(/\/less\//, '/css/') + file_name.replace(/.less$/, ".css"), compiled_file_contents, {'encoding': 'utf8'})						
 					})
 				}  
 			}, false)  
@@ -419,7 +433,12 @@ high.bootstrap = (function() {
 
 	high.util.loadServerCode();
 
-
+	if(high.config.env === "dev") {
+		// recompile css periodically in dev mode
+		setInterval(function devIntervalFunction(){
+			high.util.compileCompressCSS()
+		}, 5008)
+	} 
 
 	
 })()
