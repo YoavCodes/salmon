@@ -1,5 +1,5 @@
-# Crowdfund
-Help us fund further development at [IndieGogo](http://www.indiegogo.com/projects/351631/x/2591917)
+# Status
+The framework is currently in active development and should be considered alpha/beta quality.
 
 # HighFin.js - Lightning Fast Overview
 HighFin.js is a flexible and configurable Javascript framework. Built on Node.js for building next generation client-side apps, fast.
@@ -8,10 +8,9 @@ HighFin.js is a flexible and configurable Javascript framework. Built on Node.js
 Visit [HighF.in](http://highf.in) to learn about the PaaS/SaaS behind the framework, and read the API docs
 
 ## Roadmap
-- support LESS and SASS out of the box
+- support SASS out of the box
 - page inheritance in the navigate object
 - data-binding
-- advanced caching and cache controls that browsers respect
 - full-text client-side search
 - websockets
 - support for other databases
