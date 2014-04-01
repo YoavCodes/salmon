@@ -1,0 +1,20 @@
+{
+    "name": "my-salmon-app",
+    "preferGlobal": "false",
+    "version": "0.1.0",
+    "author": "My name",
+    "description": "My salmon app",
+    "scripts": {
+        "preinstall": ""
+    },
+    "dependencies": {
+        /* specify your app's dependencies */
+    },
+    "noAnalyze": true,
+    "devDependencies": {},
+    "bundleDependencies": [],
+    "license": "Proprietary",
+    "engine": {
+        "node": ">=0.10.3"
+    }
+}

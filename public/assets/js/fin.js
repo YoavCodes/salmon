@@ -27,9 +27,9 @@
 use log() instead of console.log() to prevent client side errors in some browsers that lack a console.
 @msg = [String or Object] what to print in the console
 */
-function log(msg) {
+function log() {
     if(typeof console !== 'undefined') {
-         console.log(msg);
+         console.log.apply(console, arguments);
     }
 }
 /****************************/
@@ -395,8 +395,8 @@ fin = {
 		assigned_events: [],
 		// path
 		hostname: window.location.hostname.toString(),
-		protocol: window.location.protocol.toString(),
-		domain: window.location.protocol.toString() + "//" + window.location.hostname.toString(),
+		protocol: window.location.protocol.toString(),		
+		domain: "//" + window.location.hostname.toString(),
 		pathname: "",
 
 		hashbang: "",
@@ -650,7 +650,7 @@ fin = {
 							if(typeof fin._meta.templates[template_name] !== 'undefined') {
 								fin.util.render('#' + fin.settings.containers[c], template_name, false)
 							} else {
-								log('Template does not exist: ' + fin.settings.navigate[key][fin.settings.containers[c]][template_name])
+								log('Template does not exist: ' + template_name + '. See server console output for solution.');//fin.settings.navigate[key][fin.settings.containers[c]][template_name])
 							}
 						}
 						
@@ -1227,7 +1227,7 @@ fin = {
 	            $(parent).html('');
 	        }
 	        var fragment = document.createDocumentFragment();
-	        var rootNode = fin.ce('div', {class:'block block_'+selector}, fragment)
+	        var rootNode = fin.ce('div', {class:'block block_'+selector}, fragment);
 	        try {
 	        	$(parent).append(fin._meta.templates[selector]( fragment, rootNode, data ));			
 	        } catch(err) {

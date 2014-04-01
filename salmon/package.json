@@ -1,0 +1,22 @@
+{
+    "name": "salmon-tail",
+    "preferGlobal": "false",
+    "version": "0.1.0",
+    "author": " <yoav@chalkhq.com>",
+    "description": "Node backend server for http://highf.in salmon applications",
+    "scripts": {
+        "preinstall": ""
+    },
+    "dependencies": {                
+        "formidable": "1.0.14",
+        "less": "1.5.0",
+        "node-static": "latest"
+    },
+    "noAnalyze": true,
+    "devDependencies": {},
+    "bundleDependencies": [],
+    "license": "Proprietary",
+    "engine": {
+        "node": ">=0.10.3"
+    }
+}

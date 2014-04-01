@@ -2,124 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>HighFin</title>
-<meta name="description" content="Swim with the Big fish — Early Registration" />
-<meta name="viewport" content="width=1100">
-
-<!-- Style -->
-<link rel="stylesheet" media="all" href="/assets/css/highfin.css&test=1" />
-<link rel="stylesheet" media="all" href="/assets/css/style.css" />
-<link rel="stylesheet" media="all" href="/assets/js/google-code-prettify/prettify.css" />
-<link rel="stylesheet" media="all" href="/assets/js/google-code-prettify/theme.css" />
+<title>Salmon</title>
 
 <!-- Javascript -->
-<script type="text/javascript" language="javascript" src="/assets/js/fin.js" ></script>
-<script type="text/javascript" language="javascript" src="/assets/js/main.js"></script>
-<script type="text/javascript" language="javascript" src="/assets/js/google-code-prettify/run_prettify.js?skin=sons-of-obsidian"></script>
+<script type="text/javascript" language="javascript" src="assets/js/fin.js" ></script>
+
 <script type="text/javascript" language="javascript">
 
 // configure app
 HighFin({
-    containers: ['world', 'readable_content', 'sidebar', 'top_mailchimp', 'bottom_mailchimp', 'bottom_t_container'],
+    containers: ['container'],
     navigate: { // a list of 'pages' defined as functions to run and container->templates to render
         // landing
         home: {
-            world: ['thebox'],
-            bottom_t_container: ['bottomtags'],
-            top_mailchimp: ['mailchimp'],
-            bottom_mailchimp: ['mailchimp']
-        },
-        // about
-        contact: {
-            world: ['_content'],
-            readable_content: ['contact'],
-            sidebar: ['_sidebar_nav'],
-            bottom_t_container: [],
-            top_mailchimp: ['_mailchimp'],
-            bottom_mailchimp: []
-        },
-        // api
-        api_overview: {
-            world: ['_content'],
-            readable_content: ['api_overview'],
-            sidebar: ['_sidebar_nav'],
-            bottom_t_container: [],
-            top_mailchimp: ['_mailchimp'],
-            bottom_mailchimp: []
-        },
-            'api_folder-overview': {
-                world: ['_content'],
-                readable_content: ['api_folder-overview'],
-                sidebar: ['_sidebar_nav'],
-                bottom_t_container: [],
-                top_mailchimp: ['_mailchimp'],
-                bottom_mailchimp: []
-            },
-            'api_quickstart': {
-                world: ['_content'],
-                readable_content: ['api_quickstart'],
-                sidebar: ['_sidebar_nav'],
-                bottom_t_container: [],
-                top_mailchimp: ['_mailchimp'],
-                bottom_mailchimp: []
-            },
-            // frontend
-            api_frontend_instantiate: {
-                world: ['_content'],
-                readable_content: ['api_frontend_instantiate'],
-                sidebar: ['_sidebar_nav'],
-                bottom_t_container: [],
-                top_mailchimp: ['_mailchimp'],
-                bottom_mailchimp: []
-            },
-            // templates
-            api_templates_overview: {
-                world: ['_content'],
-                readable_content: ['api_templates_overview'],
-                sidebar: ['_sidebar_nav'],
-                bottom_t_container: [],
-                top_mailchimp: ['_mailchimp'],
-                bottom_mailchimp: []
-            },
-            api_templates_forms: {
-                world: ['_content'],
-                readable_content: ['api_templates_forms'],
-                sidebar: ['_sidebar_nav'],
-                bottom_t_container: [],
-                top_mailchimp: ['_mailchimp'],
-                bottom_mailchimp: []
-            },
-            // misc
-            api_misc_syntaxhighlight: {
-                world: ['_content'],
-                readable_content: ['api_misc_syntaxhighlight'],
-                sidebar: ['_sidebar_nav'],
-                bottom_t_container: [],
-                top_mailchimp: ['_mailchimp'],
-                bottom_mailchimp: []
-            }
+            container: ['welcome'],            
+        }
     },    
     routes: { // a map of hashbang urls to navigate templates
-        // landing
-        'box': 'home',
-        // about
-        'contact': 'contact',
-        // api
-        'api': 'api_overview',
-            'api/overview': 'api_overview',
-            'api/folder-overview': 'api_folder-overview',
-            // tutorials
-            'api/quickstart': 'api_quickstart',
-            // front end
-            'api/frontend/instantiate': 'api_frontend_instantiate',
-            // templates
-            'api/templates/overview': 'api_templates_overview',
-            'api/templates/forms': 'api_templates_forms',
-            // misc
-            'api/misc/syntax-highlighting': 'api_misc_syntaxhighlight',
+
     },
     callbacks: { // events and callbacks to extend highfin
-        afterNavCallback: afterNavCallback,  // defined in main.js
+        
     },
     default_page: 'home'
 })
@@ -127,86 +30,11 @@ HighFin({
 
 </script>
 </head>
-<body>
+<body id="container">
     
 
 
-    <div class="bucket" >    
-    <!-- HEADER -->
-        <div id="header">        
-            
-            <a id="top_logo" href="/"><img width="838" height="110" src="/assets/imgs/logo_top.png" /></a>
-            <div id="top_nav">
-                <ul>
-                    <li><a class="selected nav_hom" href="#!/" class="selected">The Box</a></li>
-                    <li><a class="nav_api" href="#!/api/overview/">The Framework</a></li>
-                    <li><a style="background: #c4621d; text-shadow: 1px 1px #ef8615" class="nav_crowdfund" href="https://indiegogo.com/projects/highfin">Crowd Fund</a></li>
-                    <li><a class="nav_con" href="/#!/contact/">Contact</a></li>
-                </ul>
-            </div>
-        </div>
-        <!-- Begin MailChimp Signup Form -->
-        <div id="top_mailchimp"></div>
-        <!--End mc_embed_signup-->
 
-        <div id="wave">
-        </div>
-        <div id="world">
-            
-        </div>
-
-        
-    </div>
-
-    <div id="bottom_mailchimp"></div>
-        
-    <!-- END HEADER -->
-       
-
-
-    <div id="bottom_t_container">
-        
-    </div>
-
-
-
-
-    <div id="footer">&copy; 2013 ChalkHQ, http://chalkhq.com, Yoav Givati</footer>
-
-
-
-
-
-
-<!-- Google Analytics -->
-<script type="text/javascript">
-
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-38938140-1']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-
-</script>
-
-
-<!-- AddThis Button BEGIN -->
-<!--
-<div class="addthis_toolbox addthis_default_style" addthis:url="http://highf.in">
-<a class="addthis_button_facebook_like" fb:like:layout="button_count"></a>
-<a class="addthis_button_tweet"></a>
-<a class="addthis_button_google_plusone" g:plusone:size="medium"></a>
-<a class="addthis_counter addthis_pill_style"></a>
-</div>
-
-<script type="text/javascript">var addthis_config = {"data_track_addressbar":true};</script>
-<script type="text/javascript" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-51353415675700fe"></script>
--->
-<!-- AddThis Button END -->
 
 </body>
 </html>
