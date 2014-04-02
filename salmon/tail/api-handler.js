@@ -63,19 +63,19 @@ function handleApi(req, res) {
         }
         // pathname is used for admin areas, different apps, or beta versions of the site
         res['pathname'] = fields.pathname;
-        // hashbang is used for navigation
+
         res['hashbang'] = "/"; // default
         // command is used for non-url based actions
         res['command'] = fields.command;
         if (typeof fields.hashbang !== 'undefined') {
-            hashbang = fields.hashbang;
+            res['segments'] = fields.hashbang.toString().split("/");;
         }
         
         // fetch templates if requested
         getTemplates(fields, res);
 
         // keep a reference to segments
-        res['segments'] = hashbang.toString().split("/");
+        
 
         tail.router(res, res.req, res.pathname, res.segments, res.command);
     })
