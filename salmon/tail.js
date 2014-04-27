@@ -4,11 +4,11 @@ GLOBAL - BOOTSTRAP
 /*
 	// global log function, for consistency with clientside code
 */
-log = function log(msg) {
-    if (console) {
-        console.log(msg);
+log = function log() {
+    if(typeof console !== 'undefined') {
+         console.log.apply(console, arguments);
     }
-};
+}
 
 /*
 	// global error handler
