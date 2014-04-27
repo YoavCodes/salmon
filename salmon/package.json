@@ -8,6 +8,7 @@
         "preinstall": ""
     },
     "dependencies": {                
+        "shelljs": "0.2.6",
         "formidable": "1.0.14",
         "less": "1.5.0",
         "node-static": "latest"
