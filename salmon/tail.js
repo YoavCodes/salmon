@@ -150,6 +150,7 @@ tail = {
     }
 }
 
+require('shelljs/global');
 
 // define app paths, passing in the base project directory
 require('./tail/paths')(__dirname + '/../');
