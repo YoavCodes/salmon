@@ -44,9 +44,10 @@ function loadServerCode() {
     // load server-side application code
     var _path = tail.config._application_path;
     loopOverFolders([tail.config._application_path], function(file_name, root_path) {
+        var rel_path = root_path.replace(tail.config._application_path, "");
         // load .js files 
         if (file_name.match(/.js$/)) {
-            var object_path_array = String(root_path + file_name).replace(/js$/, '').split('/');
+            var object_path_array = String(rel_path + file_name).replace(/\.js$/, '').split('/');
             var object_branch = tail.app;
 
             for (var j = 0; j < object_path_array.length; j++) {
