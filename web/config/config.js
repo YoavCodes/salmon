@@ -2,7 +2,7 @@
 
 exports.config = {
     env: 'dev', // 'dev', 'staging', 'prod'
-    port: 80
+    port: 8080
     /*
 		'dev':
 			- will disable template caching
