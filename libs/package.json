@@ -8,7 +8,7 @@
         "preinstall": ""
     },
     "dependencies": {
-        /* specify your app's dependencies */
+        
     },
     "noAnalyze": true,
     "devDependencies": {},
