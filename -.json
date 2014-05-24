@@ -1,5 +1,5 @@
 {
-	"salmon": {
+	"web": {
 		"lang": "nodejs",
 		"version": "0.10.28",
 		"main": "./salmon.js",
