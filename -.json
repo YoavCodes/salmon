@@ -1,10 +1,14 @@
 {
 	"web": {
-		"lang": "nodejs",
-		"version": "0.10.28",
-		"main": "./salmon.js",
-		"watch": ["./"],
-		"exclude": ["./salmon/node_modules", "./libs/node_modules", "./public/assets/css"],
-		"npm": ["./salmon", "./libs"]
+		"exec": [{
+			"lang": "nodejs",
+			"version": "0.10.28",
+			"main": "./salmon.js",
+			"watch": ["./"],
+			"exclude": ["./salmon/node_modules", "./libs/node_modules", "./public/assets/css"],
+			"npm": ["./salmon", "./libs"],
+			"endpoints": [{"path":"/0", "port": "8080"}]
+		}],
+		"static": [{"path": "/", "dir": "./public"}]
 	}
 }
