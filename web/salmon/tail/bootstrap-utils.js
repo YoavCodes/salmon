@@ -1,46 +1,6 @@
 var fs = require('fs');
 var less = require('less');
 
-
-
-
-// compile and compress css
-function compileCompressCSS() {
-    // todo: this should happen in guppy
-    return; // temporarily disable
-    loopOverFolders([tail.config._less_path], function(file_name, root_path) {
-        // LESS 
-        if (file_name.match(/.less$/)) {
-            var parser = new(less.Parser)({
-                paths: [tail.config._less_path], // Specify search paths for @import directives
-                filename: file_name // Specify a filename, for better error messages
-            })
-            var file_contents = fs.readFileSync(root_path + file_name, {
-                'encoding': 'utf8'
-            });
-            parser.parse(file_contents, function(err, tree) {
-                if (err) {
-                    log(err)
-                    return
-                }
-                var less_config,
-                    compiled_file_contents;
-
-                if (tail.config.env === 'dev') {
-                    less_config = tail.config.less.dev;
-                } else {
-                    less_config = tail.config.less.prod;
-                }
-                compiled_file_contents = tree.toCSS(less_config)
-                fs.writeFileSync(root_path.replace(/\/less\//, '/css/') + file_name.replace(/.less$/, ".css"), compiled_file_contents, {
-                    'encoding': 'utf8'
-                })
-            })
-        }
-    }, false)
-}
-
-
 // recursively load all server-side application code onto the global tail object
 function loadServerCode() {
     // load server-side application code
@@ -62,29 +22,6 @@ function loadServerCode() {
                     object_branch = object_branch[object_path_array[j]]
                 }
             }
-        }
-    })
-}
-
-
-
-
-// update client-side cache control _CACHE_CONTROL=timestamp
-function updateCacheControl() {
-    // todo: this should happen in guppy
-    return; // temporarily disable
-    
-    var timestamp = new Date().getTime();
-    loopOverFolders([tail.config._public_path, tail.config._template_path], function(file_name, root_path) {
-        // modify .html, .js, and .css files.
-        if (file_name.match(/.html$|.js$|.css$|.less$/)) {
-            var file_contents = fs.readFileSync(root_path + file_name, {
-                'encoding': 'utf8'
-            });
-            file_contents = file_contents.replace(/_CACHE_CONTROL_=[0-9]+/g, "_CACHE_CONTROL_=" + timestamp);
-            fs.writeFileSync(root_path + file_name, file_contents, {
-                'encoding': 'utf8'
-            })
         }
     })
 }
@@ -148,14 +85,8 @@ function loopOverFolders(folders, callback, recursive, callback_on) {
     }
 }
 
-
-
 // load router
 tail.router = require(tail.config._configuration_path + 'router.js').router;
-
-compileCompressCSS();
-
-updateCacheControl();
 
 loadServerCode();
 
@@ -170,9 +101,7 @@ if (tail.config.env === "dev") {
 /*
 exports
 */
-module.exports.compileCompressCSS = compileCompressCSS;
 module.exports.loopOverFolders = loopOverFolders;
-module.exports.updateCacheControl = updateCacheControl;
 module.exports.loadServerCode = loadServerCode;
 
 
