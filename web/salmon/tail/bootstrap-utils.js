@@ -6,6 +6,8 @@ var less = require('less');
 
 // compile and compress css
 function compileCompressCSS() {
+    // todo: this should happen in guppy
+    return; // temporarily disable
     loopOverFolders([tail.config._less_path], function(file_name, root_path) {
         // LESS 
         if (file_name.match(/.less$/)) {
@@ -69,6 +71,9 @@ function loadServerCode() {
 
 // update client-side cache control _CACHE_CONTROL=timestamp
 function updateCacheControl() {
+    // todo: this should happen in guppy
+    return; // temporarily disable
+    
     var timestamp = new Date().getTime();
     loopOverFolders([tail.config._public_path, tail.config._template_path], function(file_name, root_path) {
         // modify .html, .js, and .css files.
