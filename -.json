@@ -7,10 +7,12 @@
 			"main": "./salmon.js",
 			"watch": ["./"],
 			"exclude": ["./salmon/node_modules", "./libs/node_modules", "./public/assets/css"],
+			"cachecontrol": ["./public", "./template"],
+			"less": [ {"from": "./public/assets/less", "to": "./public/assets/css", "min" :true} ],
 			"npm": ["./salmon", "./libs"],
 			"endpoints": [{"path":"/0", "port": "8080"}]			
 		}],
-		"static": [{"path": "/", "dir": "./public"}],
+		"static": [{"path": "/", "dir": "./public"}], 
 		"domains": {"app1.test": []},
 		"instances": ["6000"]
 	}
