@@ -13,25 +13,5 @@
 		"static": [{"path": "/", "dir": "./public"}],
 		"domains": {"app1.test": []},
 		"instances": ["6000"]
-	},
-	"web2": {
-		"type": "http",
-		"exec": [{
-			"lang": "nodejs",
-			"version": "0.10.28",
-			"main": "./salmon.js",
-			"watch": ["./"],
-			"exclude": ["./salmon/node_modules", "./libs/node_modules", "./public/assets/css"],
-			"npm": ["./salmon", "./libs"],
-			"endpoints": [{"path":"/0", "port": "8080"}]			
-		}],
-		"static": [{"path": "/", "dir": "./public"}],
-		"domains": {"app2.test": []},
-		"instances": ["6001"]
-	},
-	"db": {
-		"type": "mongodb",
-		"version": "2.6.3",
-		"instances": ["6002"]
 	}
 }
