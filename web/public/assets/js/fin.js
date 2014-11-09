@@ -819,7 +819,7 @@ fin = {
 			$.extend(params, _params, true)
 
 		  	// request templates and data from server
-			$.post(fin._meta.domain+"/0", params, function(res, status, xhr) {
+			$.post(fin._meta.domain+":"+window.location.port+"/0", params, function(res, status, xhr) {
 					
 					// if there are templates, then process the into locally cached templates
 					for(var i in res.templates) {
@@ -1436,7 +1436,7 @@ fin = {
 
 				// setup form
 				e.setAttribute('target', "ajaxformiframe"+attr['id'])
-				e.setAttribute('action', '/0')
+				e.setAttribute('action', ":"+window.location.port+'/0')
 			}
 			if(content != undefined && content != "") {
 				e.innerHTML = content;
