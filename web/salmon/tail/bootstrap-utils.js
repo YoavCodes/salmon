@@ -90,14 +90,6 @@ tail.router = require(tail.config._configuration_path + 'router.js').router;
 
 loadServerCode();
 
-if (tail.config.env === "dev") {
-    // recompile css periodically in dev mode
-    setInterval(function devIntervalFunction() {
-        compileCompressCSS()
-    }, 500)
-}
-
-
 /*
 exports
 */
