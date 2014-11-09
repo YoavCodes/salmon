@@ -4,12 +4,12 @@
 		"exec": [{
 			"lang": "nodejs",
 			"version": "0.10.28",
-			"main": "./salmon.js",
+			"main": "./web/salmon.js",
 			"watch": ["./"],
-			"exclude": ["./salmon/node_modules", "./libs/node_modules", "./public/assets/css"],
-			"cachecontrol": ["./public", "./template"],
-			"less": [ {"from": "./public/assets/less", "to": "./public/assets/css", "min" :true} ],
-			"npm": ["./salmon", "./libs"],
+			"exclude": ["./web/salmon/node_modules", "./web/libs/node_modules", "./web/public"],
+			"cachecontrol": ["./web/public", "./web/template"],
+			"gruntdirectory": "./web/salmon",
+			"npm": ["./web/salmon", "./web/libs"],
 			"endpoints": [{"path":"/0", "port": "8080"}]			
 		}],
 		"static": [{"path": "/", "dir": "./public"}], 
