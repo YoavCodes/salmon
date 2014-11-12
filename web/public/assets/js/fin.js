@@ -1,4 +1,4 @@
-/* HighFin.js v1.0.0
+/* fin.js v1.0.0
  * Copyright 2012-2013, Yoav Givati ( hello@yoavgivati.com )
  * http://highf.in ~ http://chalkhq.com
  *
@@ -7,17 +7,31 @@
  *
  * 
  * Updated: 15-11-2014
+ * Requires jQuery
  */
+(function($, window) {
+
+window.Fin = function HighFin(config) {
 
 /* 
 use log() instead of console.log() to prevent client side errors in some browsers that lack a console.
 @msg = [String or Object] what to print in the console
 */
-function log() {
+
+window.log = function log() {
     if(typeof console !== 'undefined') {
          console.log.apply(console, arguments);
     }
 }
+
+// ensure dependencies
+if(typeof $ === 'undefined') {
+	window.HighFin = function HighFin(){
+		log("fin.js depends on jQuery")
+	}
+	return
+}
+
 
 /*
 	global ajax error handling
@@ -30,11 +44,10 @@ $.ajaxSetup({
   	// switch unhandled error codes
   	switch(xhr.status) {
   		case 404:
-  			log('404 error')
+  			fin.util.log.error('404 error')
   			break;
   	}
-  	log($.parseJSON(res).error)
-  	log('---')
+  	fin.util.log.error($.parseJSON(res).error)  	
     
     // removes an item from the loading queue
     if(loading !== undefined) {
@@ -62,10 +75,12 @@ window.onerror = function(msg, url, line) {
         url: url,
         line: line
     }
-    log('======Error:=====')
-    log(msg)
-    log(url + ":" + line)    
-    log('======Error:=====');
+    var redStart = "%C"
+    var redEnd = "</span>"
+    
+    url = url.replace(location.protocol + "//" + location.host, "");
+
+    fin.util.log.error(msg, url, line);
         
     // report error
     try {
@@ -73,7 +88,7 @@ window.onerror = function(msg, url, line) {
     } catch(err) {
 
     }
-        
+    //throw "error";
     // suppress browser exception, return true in production environment
     return true;   
 };
@@ -134,22 +149,17 @@ Function.prototype.args = function(args) {
 	new Function(function_string)()	
 }
 
+
 /****************************/
 
-// Fin.js
+// fin object
 //===========================/
 /****************************/
-
-
-function HighFin(config) {
-
-// front-end fin object
-fin = {};
+window.fin = {};
 
 fin = {
 	// settings and defaults
-	settings: $.extend(true, {}, {
-		msg: "hi there this is default",
+	settings: $.extend(true, {}, {		
 		// nav
 		leave_alert: null, // set to "" to activate or null to disable. alerts user for confirmation on navigate away/reload
 		disable_nav: false, // toggle true/false to disable hashbang navigation
@@ -462,7 +472,8 @@ fin = {
 							if(typeof fin._meta.templates[template_name] !== 'undefined') {
 								fin.util.render('#' + fin.settings.containers[c], template_name, false)
 							} else {
-								log('Template does not exist: ' + template_name + '. See server console output for solution.');//fin.settings.navigate[key][fin.settings.containers[c]][template_name])
+								// note error will already be logged
+								fin.util.log.solution('Template "' + template_name + '" did not compile. See client or server console output for solution.');//fin.settings.navigate[key][fin.settings.containers[c]][template_name])
 							}
 						}
 						
@@ -639,9 +650,9 @@ fin = {
 						try {
 							fin.util.cacheTemplate(i, $.parseJSON(res.templates[i]))
 						} catch(err) {
-							log('Error: parsing template: ' + i + ' ( ' + err.message + " )") 
+							fin.log.error("(error parsing template) "+ err.message, i.replace("-", ".")) 
 							if(err.message.match(/ILLEGAL/)) {
-								log("Solve Error: make sure you're using backticks for strings correctly, double quotes outside of a backtick or single quote delineated string, are ILLEGAL tokens")	
+								fin.log.solve("make sure you're using backticks for strings correctly, double quotes outside of a backtick or single quote delineated string, are ILLEGAL tokens")	
 							}
 						} 
 					}
@@ -690,7 +701,7 @@ fin = {
 					} else {
 						// let user know if they specified an onSuccess handler for the form, but forgot to define it.
 						if(typeof res.meta.onSuccess !== "undefined" && typeof fin.util.getDot(res.meta.onSuccess) !== "function") {
-							log(res.meta.onSuccess + "() is not defined. Using global onSuccess handler")
+							fin.util.log.error(res.meta.onSuccess + "() is not defined. Using global onSuccess handler")
 						}
 						// generic form success
 						if(typeof fin.settings.global_form_onSuccess === "function") {
@@ -711,7 +722,7 @@ fin = {
 				  	} else {
 				  		// let user know if they specified an onError handler for the form, but forgot to define it.
 				  		if(typeof res.meta.onError !== "undefined" && typeof fin.util.getDot(res.meta.onError) !== "function") {
-							log(res.meta.onError + "() is not defined. Using global onError handler")
+							fin.util.log.error(res.meta.onError + "() is not defined. Using global onError handler")
 						}
 				  		// generic form error
 						if(typeof fin.settings.global_form_onError === "function") {
@@ -1059,16 +1070,13 @@ fin = {
 	        	var template_name = selector;
 	        	if($.inArray(selector, fin._meta.template_list) === -1) {
 	        		// it was not requested from the server
-	        		log("*")
-	        		log("Error: Template ( " + template_name + " ) not found,")
-	        		log("Solve Error: there may be an error within the template that will be printed after this,")
-	        		log("Solve Error: if not, specify " + template_name + " within the navigate object when instantiating HighFin, either under a container or the async_templates array for any page so that it gets requested from the server at runtime.")
-	        		log("*")
-	        	} else {
-	        		log("*")
-	        		log("Error: Template ( " + template_name + " ) not found,") 
-					log("Solve Error: create "+ template_name.replace(/.*_/, "") +".js OR "+template_name.replace(/.*_/, "")+".html in ( " + file_path.replace(/[a-z_\.]*$/, "").replace(/[a-z]*\/\.\.\//, "") + " )")
-					log("*")
+	        		fin.util.log.error("template not found", template_name);
+	        		fin.util.log.solution("there may be an error within the template that will be printed after this,");
+	        		fin.util.log.solution("if not, specify " + template_name + " within the navigate object when instantiating HighFin, either under a container or the async_templates array for any page so that it gets requested from the server at runtime.");	        		
+	        	} else {	        		
+	        		fin.util.log.error("template not found", template_name);
+	        		fin.util.log.solution("create "+ template_name.replace(/.*_/, "") +".js OR "+template_name.replace(/.*_/, "")+".html in ( " + file_path.replace(/[a-z_\.]*$/, "").replace(/[a-z]*\/\.\.\//, "") + " )");
+	        		throw("Error: Template ( " + template_name + " ) not found,")  	        		
 	        	}
 	        }
 			setTimeout(function(){ 
@@ -1140,7 +1148,7 @@ fin = {
 			var template_location = ""
 			// was it loaded from the server, or inline?
 			if(typeof template_string === 'undefined') {
-				log(template_string)
+				//log(template_string)
 				// template was loaded from the DOM
 				template_location = fin._meta.pathname.toString()
 
@@ -1158,7 +1166,7 @@ fin = {
 			// template error stacktrace-ability
 
 			if(scrpt.length > 0) {
-				scrpt = "fin.ce(`script`, {type: `text/javascript`}, rootNode, `setTimeout(function(){ try{ " + scrpt + " }catch(err){log('Error Rendering: "+template_location+" (' + err.message + ')')} },0);`);";
+				scrpt = "fin.ce(`script`, {type: `text/javascript`}, rootNode, `setTimeout(function(){ try{ " + scrpt + " }catch(err){fin.log.error(err.message, '"+template_location+"')} },0);`);";
 			}
 
 			// parse & rejigger template into javascript
@@ -1186,12 +1194,11 @@ fin = {
 
 			// template stack traceability
 			// adding a try/catch block that prints a stack trace, uses a regex to get the line/char number of the template file, modifies it to reflect the code and the prints out a pretty error in the console
-			tmpl = "try {" + tmpl + "} catch(err) {"+
+			tmpl = "try {" + tmpl + "} catch(err) {"+					
 					"var line = err.stack.match(/>(:[0-9]+:[0-9]+)/)[0].replace('>', ''); "+
 					"var line_array = line.split(':'); "+
-					"line_array[1] = parseInt(line_array[1], 10) -"+num_lines_remove+"; "+ 
-					"line = line_array.join(':');"+
-					"log('Error Rendering: "+template_location+" (' + err.message + ')' + line);}"; 
+					"line = (parseInt(line_array[1], 10) -"+num_lines_remove+") + ' char ' + line_array[2]; "+ 					
+					"fin.log.error(err.message, '"+template_location+"', line);}"; 
 
 			template = new Function(['fragment', 'rootNode', 'data'],tmpl)
 			
@@ -1725,7 +1732,36 @@ fin = {
 	        return sorted_tree
 	        
 
+	    },
+	    log: {
+	    	error: function logError(msg, url, line) {
+	    		var args = [];
+	    		
+	    		var args = ["%c Error %c ", "color:hsl(0, 100%, 90%);background-color:hsl(0, 100%, 50%);"]; // red with white text
+
+	    		if(typeof url !== 'undefined') {
+	    			if (typeof line !== 'undefined') {
+	    				args[0] += "on line " + line + " of " + url + " %c ";
+	    			} else {
+	    				args[0] += "in " + url + " %c ";
+	    			}
+	    			
+	    			args.push("color:hsl(0, 0%, 80%);background-color:hsl(0, 0%, 0%);") // black with grey text
+	    		}
+
+	    		args[0] += msg;
+	    		args.push("color:hsl(100, 0%, 0%);background-color:hsl(0, 0%, 100%);") // white with black text
+
+	    		log.apply(this, args);
+	    	},
+
+	    	solution: function logSolution(msg) {
+	    		var args = ["%c Solution %c " + msg, "color:hsl(240, 100%, 90%);background-color:hsl(240, 100%, 50%);", "color:hsl(100, 0%, 0%);background-color:hsl(0, 0%, 100%);"];
+
+	    		log.apply(this, args);
+	    	}
 	    }
+	    
 
 	}
 
@@ -1788,8 +1824,8 @@ $('form[ajaxform]').live('submit', function(e) {
 		try {
 			form.trigger('submit', [true])
 		} catch(err) {
-			log("Error: " + err.message)
-			log('Solve Error: If submit is not a function, do not set the name or id of any inputs in your ajaxform "submit"')
+			fin.util.log.error(err.message)
+			fin.util.log.solution('If submit is not a function, do not set the name or id of any inputs in your ajaxform "submit"')
 		}
 	},500)
 
@@ -1820,10 +1856,10 @@ $(document).ready(function(){
 });
 
 
+//window.fin = fin;
 
 
-
-
+})(jQuery, window);
 
 
 
