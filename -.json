@@ -6,9 +6,9 @@
 			"version": "0.10.28",
 			"main": "./web/salmon.js",
 			"watch": ["./"],
-			"exclude": ["./web/salmon/node_modules", "./web/libs/node_modules", "./web/public"],
-			"cachecontrol": ["./web/public", "./web/template"],
-			"gruntdirectory": "./web/salmon",
+			"exclude": ["./.git","./web/salmon/.grunt", "./web/salmon/_SpecRunner.html", "./web/salmon/node_modules", "./web/libs/node_modules", "./web/test"],
+			"less": [ {"from": "./web/public/assets/less", "to": "./web/public/assets/css", "min": false} ],
+			"cachecontrol": ["./web/public", "./web/template"],			
 			"npm": ["./web/salmon", "./web/libs"],
 			"endpoints": [{"path":"/0", "port": "8080"}]			
 		}],

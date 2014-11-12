@@ -14,7 +14,7 @@
     "mongodb": "latest"
   },
   "devDependencies": {
-    "grunt-contrib-less": "^0.12.0",
+    "grunt-contrib-jasmine": "^0.8.1",    
     "grunt-contrib-watch": "^0.6.1"
   },
   "noAnalyze": true,

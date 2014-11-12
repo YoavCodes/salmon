@@ -1638,8 +1638,6 @@ $.extend(true, fin.util, Fin.prototype.plugins);
 
 fin._meta.pathname = fin.util.removeEndSlashes(window.location.pathname.toString())	
 
-}
-
 // ajax form capture
 
 // @parseValidate has to be a string reference to a function that returns true or false, it is passed the jquery selected form object
@@ -1715,6 +1713,10 @@ $(document).ready(function(){
 	
 	
 });
+
+}
+
+
 
 
 //window.fin = fin;
