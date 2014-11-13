@@ -6,9 +6,9 @@ function definePaths(_base_path) {
         _configuration_path: _base_path + "config/",
         _template_path: _base_path + "templates/", // requres trailing slash
         _public_path: _base_path + "public/",
-        _css_path: _base_path + "public/assets/css/",
-        _less_path: _base_path + "public/assets/less/",
-        less: {
+        //_css_path: _base_path + "public/assets/css/",
+        //_less_path: _base_path + "public/assets/less/",
+        /*less: {
             dev: {
                 compress: false,
                 yuicompress: false,
@@ -17,7 +17,7 @@ function definePaths(_base_path) {
             prod: {
                 yuicompress: true,
             }
-        }
+        }*/
     }, require(_base_path + "config/config.js").config)
 }
 

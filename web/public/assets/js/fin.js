@@ -36,15 +36,15 @@ $.ajaxSetup({
   	// switch unhandled error codes
   	switch(xhr.status) {
   		case 404:
-  			fin.util.log.error('404 error')
+  			//log('404 error')
   			break;
   	}
-  	fin.util.log.error($.parseJSON(res).error)  	
+  	//log($.parseJSON(res).error)  	
     
     // removes an item from the loading queue
-    if(loading !== undefined) {
-        loading(false)
-    }
+    // if(loading !== undefined) {
+    //     loading(false)
+    // }
     return true
   }
 });
@@ -72,7 +72,7 @@ window.onerror = function(msg, url, line) {
     
     url = url.replace(location.protocol + "//" + location.host, "");
 
-    fin.util.log.error(msg, url, line);
+    log(msg, url, line);
         
     // report error
     try {
