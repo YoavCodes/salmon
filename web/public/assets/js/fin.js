@@ -95,50 +95,29 @@ eg: for the function
 	}
 	you would call
 	showAlert.args({console_msg: "hi I'm in the console", msg: "Hi I'm an alert"})
-	it doesn't matter how you order the arguments object.
-
+	it doesn't matter how you order the arguments object. 
+	keys in the object which the function is not expecting will be ignored
+	expected arguments which do not have corresponding keys will be set to undefined
+	arguments passed into args({}, unnamed_arguments...) after the object will be passed onto the function as unnamed arguments in the same order
 */
-Function.prototype.args = function(args) {		
-	// clone args, as it may contain a reference to an actual object somewhere
-	args = $.extend(true, {}, args)
+Function.prototype.args = function(named_args) {		
+	// get an array of the names of arguments the function expects	
+	var params = this.toString().match(/\(([^)]*)\)/)[1].replace(/[ ]*/g, "").split(',');			
 
-	// get an array of arguments the function expects
-	var function_string = this.toString() + ";";
-	var function_name = function_string.match(/[a-zA-Z]+(?=\()/)[0]
-	var arg_string = function_string.match(/\([^)]*\)/)[0]
-	arg_string = arg_string.substring(1, arg_string.length-1).replace(/[ ]*/g, "")
-	
-	var arg_array = arg_string.split(',')		
+	var args = [];  // array of actual arguments to be passed in
 
-	// create the function call string
-	function_string += function_name + "(";
 	// loop through arguments the function expects and fetch them from the args object passed into args
-	for(var i=0; i<arg_array.length; i++) {
-		if(i > 0) {
-			function_string += ","
-		}
-		var arg = args[arg_array[i]] //note: we want to preserve undefined if it is and pass it along
-		if(typeof arg !== 'function') {
-			arg = JSON.stringify(arg);
-		}
-		function_string += arg
-
-		// delete the reference to this arg from args
-		delete args[arg_array[i]];
+	for(var i=0; i<params.length; i++) {
+		var value = named_args[params[i]]; //note: we want to preserve undefined if it is and pass it along
+		args.push(value);
 	}
-	// loop through the remaining args passed to args, and insert them as unnamed variables to the function
-	for(var j in args) {
-		function_string += ",";
-		var arg = args[j]
-		if(typeof arg !== 'function') {
-			arg = JSON.stringify(arg);
-		}
-		function_string += arg
-	}
-	function_string += ");"
 
-	// create and run the new function	
-	new Function(function_string)()	
+	// note: ~3 times faster than using splice/concat
+	for(var i=1; i<arguments.length; i++) {
+		args.push(arguments[i]);
+	}
+
+	return this.apply(this, args);
 }
 
 
