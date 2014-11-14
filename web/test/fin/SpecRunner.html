@@ -3,24 +3,21 @@
 <html>
 <head>
   <title>Jasmine Test Runner</title>
-  <link rel="stylesheet" type="text/css" href="/usr/local/n/0.10.28/lib/node_modules/phantom-jasmine/vendor/jasmine-1.2.0/jasmine.css">
   <script type="text/javascript" src="/usr/local/n/0.10.28/lib/node_modules/phantom-jasmine/vendor/jasmine-1.2.0/jasmine.js"></script>
-  <script type="text/javascript" src="/usr/local/n/0.10.28/lib/node_modules/phantom-jasmine/vendor/jasmine-1.2.0/jasmine-html.js"></script>
 
-  <script type="text/javascript" src="/vagrant/salmon/web/test/fin/console-runner.js"></script>
+  <script type="text/javascript" src="console-runner.js"></script>
 
   <!-- SOURCE FILES -->
-  <script type="text/javascript" src="/vagrant/salmon/web/public/assets/js/jquery.js"></script>
-  <script type="text/javascript" src="/vagrant/salmon/web/public/assets/js/fin.js"></script>
+  <script type="text/javascript" src="../../public/assets/js/jquery.js"></script>
+  <script type="text/javascript" src="../../public/assets/js/fin.js" data-cover></script>
 
   <!-- TEST FILES -->
-  <script type="text/javascript" src="/vagrant/salmon/web/test/fin/testSpec.js"></script>
+  <script type="text/javascript" src="testSpec.js"></script>
 </head>
 <body>
 
 <script type="text/javascript">
   var console_reporter = new jasmine.ConsoleReporter()
-  jasmine.getEnv().addReporter(new jasmine.TrivialReporter());
   jasmine.getEnv().addReporter(console_reporter);
   jasmine.getEnv().execute();
 </script>

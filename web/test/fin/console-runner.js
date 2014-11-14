@@ -13,6 +13,8 @@
     throw "jasmine library isn't loaded!";
   }
 
+ 
+
   var ANSI = {}
   ANSI.color_map = {
       "green" : 32,
@@ -57,7 +59,7 @@
     this.status = this.statuses.running;
     this.start_time = (new Date()).getTime();
 
-    var startMessage = 'Starting front-end unit tests...';
+    var startMessage = '';
 
     if (this.format == 'doc') {
       startMessage = 'Specs:';
@@ -96,17 +98,17 @@
       var resultText = failCount + ') ' + spec.getFullName();
       var indentLevel = failCount > 9 ? 1 : 2;
       this.log(indent(resultText, indentLevel));
-
+      this.log("\n\r");
       var items = spec.results().getItems()
       for (var j = 0; j < items.length; j++) {
         var message = items[j].trace.stack || items[j].trace.message;
 
         if (message) {
-          var lines = message.split('\n');
+          var lines = message.split("\n\r");
 
           if (this.trace) {
             this.log(indent(lines.shift(), 5), 'red');
-            this.log(indent(lines.join('\n   '), 3), 'teal');
+            this.log(indent(lines.join("\n\r   "), 3), 'teal');
           }
           else {
             this.log(indent(lines[0]+"\n\r", 5), 'red');
@@ -114,13 +116,14 @@
         }
       }
 
-      this.log('');
+     // this.log("\n\r");
     }
 
-    this.log("");
-    this.log("Finished in " + (dur/1000) + " seconds ");
+    this.log("\n\r");
+    this.log("Finished in " + (dur/1000) + " seconds \n\r");
     this.finished = true;
-    this.log(spec_str + fail_str + "\n\r", color);
+    this.log(spec_str + fail_str + "\n\r \n\r", color);
+    
 
     this.status = (failed > 0)? this.statuses.fail : this.statuses.success;
   };
@@ -144,7 +147,7 @@
     var logSuite = function(suite, level) {
       var level = level || 0;
 
-      self.log('');
+      
       self.log(indent(suite.description, 4 + level));
 
       logSpecs(suite.specs(), level + 2);

@@ -34,5 +34,5 @@ page.open(system.args[1], function(status){
     if (status !== "success") {
         console.log("Couldn't load the page");
     }
-    system.stdout.writeLine("");
+    //system.stdout.writeLine("");
 });
