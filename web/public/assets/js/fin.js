@@ -50,76 +50,6 @@ $.ajaxSetup({
 });
 
 
-/****************************/
-
-// Extend Native
-//===========================/
-/****************************/
-
-/*
-    global error handler
-    note: site won't break on error, but functions will stop executing at exception
-*/
-window.onerror = function(msg, url, line) {
-    
-    var error = {
-        msg: msg,
-        url: url,
-        line: line
-    }
-    var redStart = "%C"
-    var redEnd = "</span>"
-    
-    url = url.replace(location.protocol + "//" + location.host, "");
-
-    log(msg, url, line);
-        
-    // report error
-    try {
-        //reportError(msg, url, line)
-    } catch(err) {
-
-    }
-    //throw "error";
-    // suppress browser exception, return true in production environment
-    return true;   
-};
-
-/*
-every function will have the .args() function which will alow you to call it with a key/pair object of named arguements
-@args: a key/value map of it's arguments and the values you want to pass
-eg: for the function
-	function showAlert(msg, console_msg) {
-		console.log(console_msg)
-		alert(msg)
-	}
-	you would call
-	showAlert.args({console_msg: "hi I'm in the console", msg: "Hi I'm an alert"})
-	it doesn't matter how you order the arguments object. 
-	keys in the object which the function is not expecting will be ignored
-	expected arguments which do not have corresponding keys will be set to undefined
-	arguments passed into args({}, unnamed_arguments...) after the object will be passed onto the function as unnamed arguments in the same order
-*/
-Function.prototype.args = function(named_args) {		
-	// get an array of the names of arguments the function expects	
-	var params = this.toString().match(/\(([^)]*)\)/)[1].replace(/[ ]*/g, "").split(',');			
-
-	var args = [];  // array of actual arguments to be passed in
-
-	// loop through arguments the function expects and fetch them from the args object passed into args
-	for(var i=0; i<params.length; i++) {
-		var value = named_args[params[i]]; //note: we want to preserve undefined if it is and pass it along
-		args.push(value);
-	}
-
-	// note: ~3 times faster than using splice/concat
-	for(var i=1; i<arguments.length; i++) {
-		args.push(arguments[i]);
-	}
-
-	return this.apply(this, args);
-}
-
 
 /****************************/
 
@@ -397,7 +327,7 @@ fin = {
 			if(fin.settings.navigate[key]['before_func'] !== undefined) {
 				for (var i = 0; i < fin.settings.navigate[key]['before_func'].length; i++) {
 					var before_func_obj = fin.settings.navigate[key]['before_func'][i]
-					before_func_obj[0].args(before_func_obj[1])
+					before_func_obj[0].curry(before_func_obj[1])()
 				}
 			}
 
@@ -465,7 +395,7 @@ fin = {
 			if(fin.settings.navigate[key]['after_func'] !== undefined) {
 				for (var i = 0; i < fin.settings.navigate[key]['after_func'].length; i++) {
 					var after_func_obj = fin.settings.navigate[key]['before_func'][i]
-					after_func_obj[0].args(after_func_obj[1])
+					after_func_obj[0].curry(after_func_obj[1])()
 				}
 			}
 
@@ -1570,6 +1500,22 @@ fin = {
 	        
 
 	    },
+	    getFunctionArguments: function getFunctionArguments(params, named_args, unnamed_arguments) {
+	    	var args = [];  // array of actual arguments to be passed in
+
+	    	// loop through arguments the function expects and fetch them from the args object passed into args
+	    	for(var i=0; i<params.length; i++) {
+	    		var value = named_args[params[i]]; //note: we want to preserve undefined if it is and pass it along
+	    		args.push(value);
+	    	}
+
+	    	// note: ~3 times faster than using splice/concat
+	    	for(var i=1; i<unnamed_arguments.length; i++) {
+	    		args.push(unnamed_arguments[i]);
+	    	}	
+
+	    	return args
+	    },
 	    log: {
 	    	error: function logError(msg, url, line) {
 	    		var args = [];
@@ -1612,10 +1558,121 @@ $.extend(true, fin, {
 	log: fin.util.log,
 })
 
+/****************************/
+
+// Extend Native
+//===========================/
+/****************************/
+
+/*
+    global error handler
+    note: site won't break on error, but functions will stop executing at exception
+*/
+window.onerror = function(msg, url, line) {
+    
+    var error = {
+        msg: msg,
+        url: url,
+        line: line
+    }
+    var redStart = "%C"
+    var redEnd = "</span>"
+    
+    url = url.replace(location.protocol + "//" + location.host, "");
+
+    log(msg, url, line);
+        
+    // report error
+    try {
+        //reportError(msg, url, line)
+    } catch(err) {
+
+    }
+    //throw "error";
+    // suppress browser exception, return true in production environment
+    return true;   
+};
+
+/*
+every Function will have the .curry() method which will alow you to call it with a key/pair object of named arguements followed by ...unnamed arguments
+@args: a key/value map of it's arguments and the values you want to pass
+@...: followed by any number of unnamed arguments
+eg: for the function
+	function test_concat(one, two, three) {
+		var str = ""+one+two+three;
+		if(arguments.length > 3) {
+			for(var i=3; i<arguments.length; i++) {
+				str += arguments[i];
+			}
+		}
+		return str
+	}
+	you would call
+	test_concat.curry({two: 2, one: 1, three:3})() // 123
+
+@return: a function that wraps the original function and passes in the curried values
+	it doesn't matter how you order the arguments object. 
+	keys in the object which the function is not expecting will be ignored
+	expected arguments which do not have corresponding keys will be set to undefined
+	arguments passed into args({}, unnamed_arguments...) after the object will be passed onto the function as unnamed arguments in the same order
+	you can then execute the returned function, or call curry again on the returned function providing more
+	named args, and keep doing that until your heart's content.
+	calling it a second time with some of the same argument keys will replace the previous values for those named arguments
+	var x = test_concat.curry({two: 2, one: 1, three:3})
+	x.curry({three:9})() // 129
+	var y = x.curry({}, 4, 5) 
+	var z = y.curry({}, 6, 7)
+	y() // 12345
+	z() // 1234567
+
+
+	note: when you call curry on a curried function. this will equal func in a closure. 
+*/
+
+Function.prototype.curry = function curry(named_args) {
+	var that = this;
+
+	if(typeof that.prototype.curry_args !== 'undefined') {		
+		named_args = $.extend(true, {}, that.prototype.curry_args, named_args);
+	}
+
+	var unnamed_args = fin.util.getFunctionArguments([], {}, arguments);
+
+	if(typeof that.prototype.unnamed_args !== 'undefined') {		
+		var previous_unnamed_args = that.prototype.unnamed_args;
+		unnamed_args = [].concat(previous_unnamed_args, unnamed_args);
+		arguments = [named_args].concat(unnamed_args);
+	}
+
+	if (typeof that.prototype.curry_fn !== 'undefined') {
+		that = that.prototype.curry_fn;
+	}
+	var params = that.toString().match(/\(([^)]*)\)/)[1].replace(/[ ]*/g, "").split(',');				
+	var args = fin.util.getFunctionArguments(params, named_args, arguments);	
+	
+	var func;
+	
+	func = function func(){
+		return that.apply(that, args);
+	}
+
+	func.prototype.curry_args = named_args;
+	func.prototype.unnamed_args = unnamed_args;
+	func.prototype.curry_fn = that;
+
+	return func
+}
+
+
+
+
+fin._meta.pathname = fin.util.removeEndSlashes(window.location.pathname.toString())	
+
+
+
 // load plugins
 $.extend(true, fin.util, Fin.prototype.plugins);
 
-fin._meta.pathname = fin.util.removeEndSlashes(window.location.pathname.toString())	
 
 // ajax form capture
 
