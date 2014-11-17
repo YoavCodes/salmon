@@ -72,7 +72,7 @@ fin = {
 				'sidebar': ['template_id', 'template2_id'],   // list of templates to render into the sidebar. Actually templates are all #block_template_id. but #block_ is excluded here and prepended automativally by the nav() function
 				'userbar': ['_user'],   // same as sidebar, the underscore before user indicates that the template should not be re-rendered if it already exists on the stage, and can be used on any template_id
 				'after_func': [[function, {arg: value, arg1: value1}]] /// like before_func, a list of functions that run after rendering all templates
-				'async_templates': ['', ''], // templates rendered by calling the fin.util.render() function from within another template or that are otherwise needed by this page after rendering. 
+				'async_templates': ['', ''], // templates rendered by calling the fin.render() function from within another template or that are otherwise needed by this page after rendering. 
 											 // ie: templates listed here will be requested from the server. you can list any template here you want to request from the server at bootstrap, it doesn't matter if it's a duplicate mentioned somewhere else, 
 											 // this is just marking it as a dependency for this 'page', so as long as a page needs it, it'll be fetched
 			}
@@ -162,14 +162,14 @@ fin = {
 			}
 		}
 	},
-	util: { // highfin utilities
+	
 		log: log, // shortcut for consistency with the backend
 		// todo: cleanup dot function now that unit tests are written and passing
 		// function for getting a dot notation path of an object
 		// @obj_path: String, dot notation String eg: "data.meta.current_section.name"
 		// @get_key: Boolean, 
-					// if true; will return the key for a foreign key value, eg: returns 1 from fin.util.dot("data.meta.current_section", true) where the value of data.meta.current_section is "__data.sections.1"
-					// if false; will delete the key/value from the local data model. so fin.util.dot("data.meta.current_section", false) will delete data.sections[1], where the value of data.meta.current_section is "__data.sections.1"
+					// if true; will return the key for a foreign key value, eg: returns 1 from fin.dot("data.meta.current_section", true) where the value of data.meta.current_section is "__data.sections.1"
+					// if false; will delete the key/value from the local data model. so fin.dot("data.meta.current_section", false) will delete data.sections[1], where the value of data.meta.current_section is "__data.sections.1"
 		// pass boolean true as the get_key, to parse the last foreign key for the value of the id		
 		// @new_value used for assigning a new value to the key at the end of the path
 		dot: function dot(obj_path, get_key, object, new_value){
@@ -210,23 +210,23 @@ fin = {
 						if((i+1) == path.length && get_key === true) {
 							// we only want the foreign_key itself
 							if(value[path[i]] !== null) {
-								return value[path[i]]//fin.util.getID(value[path[i]])
+								return value[path[i]]//fin.getID(value[path[i]])
 							} else {
 								return ""
 							}
 
 						} else if((i+1) == path.length && get_key === false) {
 							// we're deleting the object to which the foreign key refers to
-							fin.util.dot(dot_string, get_key)
+							fin.dot(dot_string, get_key)
 							// at the end of the foreign key chain the item will be deleted by an alternate condition
 							// then will regressively delete the foreign keys in the chain
 							value[path[i]] = ""
 							return
 						} else if(i === path.length - 1 && new_value !== undefined) {
-							fin.util.dot(dot_string, get_key, null, new_value)
+							fin.dot(dot_string, get_key, null, new_value)
 						} else {
 							// do lookup
-							value = fin.util.dot(dot_string);
+							value = fin.dot(dot_string);
 						}
 					} else {
 						// even if it's not a foreign key, we may still want to delete it
@@ -249,7 +249,7 @@ fin = {
 		},
 		// helper function, for setting the value for the node of a dotnotation string
 		setDot: function(obj_path, new_value, object) {
-			fin.util.dot(obj_path, null, object, new_value)
+			fin.dot(obj_path, null, object, new_value)
 		},
 		getID: function(fk) {
 			if(fk === null) {
@@ -351,10 +351,10 @@ fin = {
 						}
 						if(render === true) {
 							if(typeof fin._meta.templates[template_name] !== 'undefined') {
-								fin.util.render('#' + fin.settings.containers[c], template_name, false)
+								fin.render('#' + fin.settings.containers[c], template_name, false)
 							} else {
 								// note error will already be logged
-								fin.util.log.solution('Template "' + template_name + '" did not compile. See client or server console output for solution.');//fin.settings.navigate[key][fin.settings.containers[c]][template_name])
+								fin.log.solution('Template "' + template_name + '" did not compile. See client or server console output for solution.');//fin.settings.navigate[key][fin.settings.containers[c]][template_name])
 							}
 						}
 						
@@ -442,7 +442,7 @@ fin = {
 					.length, window.location.search.length);	
 			}
 			// parse hash segments
-			fin._meta.hashbang = fin.util.removeEndSlashes(fin._meta.hashbang);
+			fin._meta.hashbang = fin.removeEndSlashes(fin._meta.hashbang);
 			//split
 			segments = fin._meta.hashbang.split("/");
 			
@@ -453,7 +453,7 @@ fin = {
 			for(var i=0; i < segments.length; i++) {
 				
 				if(typeof fin.settings.routes[match_bang] !== 'undefined') {
-					fin.util.nav(fin.settings.routes[match_bang]);
+					fin.nav(fin.settings.routes[match_bang]);
 					return;
 				} else {
 					//log('route ' + match_bang + ' not found')
@@ -463,7 +463,7 @@ fin = {
 			
 			// show default screen unless user just navigated somewhere via url
 			//if(fin._meta.last_nav() === "" && typeof fin.settings.default_page !== 'undefined') {		
-				fin.util.nav(fin.settings.default_page)		
+				fin.nav(fin.settings.default_page)		
 			//}
 			
 			
@@ -503,7 +503,7 @@ fin = {
 				params['template_list'] = fin._meta.template_list.toString()
 			} 
 
-			fin.util.getData(params, function(){				
+			fin.getData(params, function(){				
 				// Trigger the event (useful on page load).
   				//$(window).hashchange();								
   				window.onhashchange();
@@ -529,7 +529,7 @@ fin = {
 					// if there are templates, then process the into locally cached templates
 					for(var i in res.templates) {
 						try {
-							fin.util.cacheTemplate(i, $.parseJSON(res.templates[i]))
+							fin.cacheTemplate(i, $.parseJSON(res.templates[i]))
 						} catch(err) {
 							fin.log.error("(error parsing template) "+ err.message, i.replace("-", ".")) 
 							if(err.message.match(/ILLEGAL/)) {
@@ -551,7 +551,7 @@ fin = {
 						}
 
 					} else if(res.meta.status === 401) {
-						fin.util.nav('login')
+						fin.nav('login')
 					}
 				})
 			
@@ -576,13 +576,13 @@ fin = {
 			  	// handle result
 			  	if(res.meta.status === 200) {
 			  		// handle success
-					if(typeof res.meta.onSuccess !== "undefined" && typeof fin.util.dot(res.meta.onSuccess) === "function") {
+					if(typeof res.meta.onSuccess !== "undefined" && typeof fin.dot(res.meta.onSuccess) === "function") {
 						// dev is handling this form's success
-						fin.util.dot(res.meta.onSuccess)(res)
+						fin.dot(res.meta.onSuccess)(res)
 					} else {
 						// let user know if they specified an onSuccess handler for the form, but forgot to define it.
-						if(typeof res.meta.onSuccess !== "undefined" && typeof fin.util.dot(res.meta.onSuccess) !== "function") {
-							fin.util.log.error(res.meta.onSuccess + "() is not defined. Using global onSuccess handler")
+						if(typeof res.meta.onSuccess !== "undefined" && typeof fin.dot(res.meta.onSuccess) !== "function") {
+							fin.log.error(res.meta.onSuccess + "() is not defined. Using global onSuccess handler")
 						}
 						// generic form success
 						if(typeof fin.settings.global_form_onSuccess === "function") {
@@ -596,14 +596,14 @@ fin = {
 					}
 				} else {
 					// handle error
-				  	if(typeof res.meta.onError !== "undefined" && typeof fin.util.dot(res.meta.onError) === "function") {
+				  	if(typeof res.meta.onError !== "undefined" && typeof fin.dot(res.meta.onError) === "function") {
 				  		// dev is handling this form's error
-				  		fin.util.dot(res.meta.onError)(res)
+				  		fin.dot(res.meta.onError)(res)
 
 				  	} else {
 				  		// let user know if they specified an onError handler for the form, but forgot to define it.
-				  		if(typeof res.meta.onError !== "undefined" && typeof fin.util.dot(res.meta.onError) !== "function") {
-							fin.util.log.error(res.meta.onError + "() is not defined. Using global onError handler")
+				  		if(typeof res.meta.onError !== "undefined" && typeof fin.dot(res.meta.onError) !== "function") {
+							fin.log.error(res.meta.onError + "() is not defined. Using global onError handler")
 						}
 				  		// generic form error
 						if(typeof fin.settings.global_form_onError === "function") {
@@ -832,17 +832,17 @@ fin = {
 	        	var template_name = selector;
 	        	if($.inArray(selector, fin._meta.template_list) === -1) {
 	        		// it was not requested from the server
-	        		fin.util.log.error("template not found", template_name);
-	        		fin.util.log.solution("there may be an error within the template that will be printed after this,");
-	        		fin.util.log.solution("if not, specify " + template_name + " within the navigate object when instantiating HighFin, either under a container or the async_templates array for any page so that it gets requested from the server at runtime.");	        		
+	        		fin.log.error("template not found", template_name);
+	        		fin.log.solution("there may be an error within the template that will be printed after this,");
+	        		fin.log.solution("if not, specify " + template_name + " within the navigate object when instantiating HighFin, either under a container or the async_templates array for any page so that it gets requested from the server at runtime.");	        		
 	        	} else {	        		
-	        		fin.util.log.error("template not found", template_name);
-	        		fin.util.log.solution("create "+ template_name.replace(/.*_/, "") +".js OR "+template_name.replace(/.*_/, "")+".html in ( " + file_path.replace(/[a-z_\.]*$/, "").replace(/[a-z]*\/\.\.\//, "") + " )");
+	        		fin.log.error("template not found", template_name);
+	        		fin.log.solution("create "+ template_name.replace(/.*_/, "") +".js OR "+template_name.replace(/.*_/, "")+".html in ( " + file_path.replace(/[a-z_\.]*$/, "").replace(/[a-z]*\/\.\.\//, "") + " )");
 	        		throw("Error: Template ( " + template_name + " ) not found,")  	        		
 	        	}
 	        }
 			setTimeout(function(){ 
-				fin.util.attachEventListeners();
+				fin.attachEventListeners();
 			}, 0)
 			
 
@@ -876,7 +876,7 @@ fin = {
 			var dot_location_midpath = selector.replace(/_[^_]*$/, "").replace(/_/g, ".") 
 			
 			// auto namespace exported functions
-			tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin.util.dot(`fin.fn."+dot_location_midpath+".$1`); fin.fn."+dot_location_midpath+".$1 = function $2(")
+			tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin.dot(`fin.fn."+dot_location_midpath+".$1`); fin.fn."+dot_location_midpath+".$1 = function $2(")
 			// mask escaped backticks
 			tmpl = tmpl.replace(/\\`/g, "___escaped_backtick___")
 			// shortcut for fin.ce(` part of the function for more fluid typing and readability
@@ -1143,7 +1143,7 @@ fin = {
 	    sort: function(list, sort_paths) {
 	    	// if list is a string fetc the referenced object
 	    	if(typeof list === "string") {
-	    		list = fin.util.dot(list);	
+	    		list = fin.dot(list);	
 	    	}
 
 	    	var sorted_list = [];
@@ -1162,8 +1162,8 @@ fin = {
 	        //sort the array
 	        sorted_list.sort(function(a, b){
 	        	for(var i=0; i<sort_paths.length; i++) {
-	        		var _a = fin.util.dot(sort_paths[i][0], null, a);
-	        		var _b = fin.util.dot(sort_paths[i][0], null, b);
+	        		var _a = fin.dot(sort_paths[i][0], null, a);
+	        		var _b = fin.dot(sort_paths[i][0], null, b);
 	        		var _direction = sort_paths[i][1];
 	        		// if descending just switch _a and _b
 	        		if(_direction === "desc") {
@@ -1400,9 +1400,9 @@ fin = {
 	                    for(var j=0; j<search_paths[l].length; j++) {
 	                        
 	                        if(must_match_paths[l].length === 0) {
-	                            searchable_content += fin.util.dot(search_paths[l][j], null, tree[i]);
+	                            searchable_content += fin.dot(search_paths[l][j], null, tree[i]);
 	                        } else {
-	                            must_matched_searchabled_content += fin.util.dot(search_paths[l][j], null, tree[i])
+	                            must_matched_searchabled_content += fin.dot(search_paths[l][j], null, tree[i])
 	                        }
 	                    }
 
@@ -1473,7 +1473,7 @@ fin = {
 	           
 	          
 	        
-	        //fin.util.dot('data.meta.current_section.apps.multichoice')['filtered_questions']
+	        //fin.dot('data.meta.current_section.apps.multichoice')['filtered_questions']
 	        setDot(cache, sorted_tree)
 	       
 	        return sorted_tree
@@ -1526,16 +1526,16 @@ fin = {
 	    }
 	    
 
-	}
+	
 
 
 }
 // refine HighFin object
 // shortcuts to minimize typing
 $.extend(true, fin, {
-	ce: fin.util.createElement,
-	ach: fin.util.appendChild,
-	log: fin.util.log,
+	ce: fin.createElement,
+	ach: fin.appendChild,
+	log: fin.log,
 })
 
 /****************************/
@@ -1616,7 +1616,7 @@ Function.prototype.curry = function curry(named_args) {
 		named_args = $.extend(true, {}, that.prototype.curry_args, named_args);
 	}
 
-	var unnamed_args = fin.util.getFunctionArguments([], {}, arguments);
+	var unnamed_args = fin.getFunctionArguments([], {}, arguments);
 
 	if(typeof that.prototype.unnamed_args !== 'undefined') {		
 		var previous_unnamed_args = that.prototype.unnamed_args;
@@ -1628,7 +1628,7 @@ Function.prototype.curry = function curry(named_args) {
 		that = that.prototype.curry_fn;
 	}
 	var params = that.toString().match(/\(([^)]*)\)/)[1].replace(/[ ]*/g, "").split(',');				
-	var args = fin.util.getFunctionArguments(params, named_args, arguments);	
+	var args = fin.getFunctionArguments(params, named_args, arguments);	
 	
 	var func;
 	
@@ -1646,7 +1646,7 @@ Function.prototype.curry = function curry(named_args) {
 
 
 
-fin._meta.pathname = fin.util.removeEndSlashes(window.location.pathname.toString())	
+fin._meta.pathname = fin.removeEndSlashes(window.location.pathname.toString())	
 
 
 
@@ -1661,9 +1661,9 @@ $('form[ajaxform]').live('submit', function(e) {
 	var form = $(e.target);
 
 	if(arguments[1] === true) {
-		var validator = fin.util.dot(form.attr('parseValidate'))
+		var validator = fin.dot(form.attr('parseValidate'))
 		if(typeof validator === "function") {
-			//fin.util.log('no! ' + validator(form))
+			//fin.log('no! ' + validator(form))
 			return validator(form)
 		} else {
 			return true
@@ -1699,8 +1699,8 @@ $('form[ajaxform]').live('submit', function(e) {
 		try {
 			form.trigger('submit', [true])
 		} catch(err) {
-			fin.util.log.error(err.message)
-			fin.util.log.solution('If submit is not a function, do not set the name or id of any inputs in your ajaxform "submit"')
+			fin.log.error(err.message)
+			fin.log.solution('If submit is not a function, do not set the name or id of any inputs in your ajaxform "submit"')
 		}
 	},500)
 
@@ -1711,20 +1711,20 @@ $('form[ajaxform]').live('submit', function(e) {
 
 
 $(document).ready(function(){
-	window.onbeforeunload = fin.util.onbeforeunload;
+	window.onbeforeunload = fin.onbeforeunload;
   	
-  	//$(window).hashchange(fin.util.onHashchange)
-  	window.onhashchange = fin.util.onHashchange;
+  	//$(window).hashchange(fin.onHashchange)
+  	window.onhashchange = fin.onHashchange;
 
   	// cache embedded templates
   	$("script[type='text/template']").each(function(i) {
-  		fin.util.cacheTemplate($(this).attr('id').replace(/template_/, ""))
+  		fin.cacheTemplate($(this).attr('id').replace(/template_/, ""))
   	})
 
   	// fetch templates * will also trigger hashchange event
-  	fin.util.fetchTemplates()
+  	fin.fetchTemplates()
 
-	fin.util.loading(false)
+	fin.loading(false)
 
 	
 	
