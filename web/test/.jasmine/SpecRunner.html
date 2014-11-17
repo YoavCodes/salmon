@@ -13,10 +13,13 @@
 
   <!-- TEST FILES -->
   <script type="text/javascript" src="../fin/function.curry.spec.js"></script>
+  <script type="text/javascript" src="../fin/util/dot.spec.js"></script>
 </head>
 <body>
 
 <script type="text/javascript">
+  // - todo: upgrade jasmine to a more recent version with beforeAll/afterAll support
+
   var console_reporter = new jasmine.ConsoleReporter()
   jasmine.getEnv().addReporter(console_reporter);
   jasmine.getEnv().execute();

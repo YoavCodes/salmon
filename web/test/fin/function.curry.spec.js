@@ -1,21 +1,18 @@
-describe("Function.prototype.args", function() {
+describe("Function.prototype.curry", function() {
 	
-	function test(one, two, three) {
-		var str = ""+one+two+three;
-		if(arguments.length > 3) {
-			for(var i=3; i<arguments.length; i++) {
-				str += arguments[i];
-			}
-		}
-		return str
-	}
-	beforeEach(function(){
-		Fin();		
-	});
 
-	afterEach(function(){
-		fin = void 0;
-	});
+		function test(one, two, three) {
+			var str = ""+one+two+three;
+			if(arguments.length > 3) {
+				for(var i=3; i<arguments.length; i++) {
+					str += arguments[i];
+				}
+			}
+			return str
+		}
+		
+		Fin();		
+	
 
 	it("should allow using named arguments with a function", function() {
 		var output = test.curry({one: "1", two: "2", three: "3"})();

@@ -164,15 +164,15 @@ fin = {
 	},
 	util: { // highfin utilities
 		log: log, // shortcut for consistency with the backend
+		// todo: cleanup dot function now that unit tests are written and passing
 		// function for getting a dot notation path of an object
 		// @obj_path: String, dot notation String eg: "data.meta.current_section.name"
 		// @get_key: Boolean, 
-					// if true; will return the key for a foreign key value, eg: returns 1 from fin.util.getDot("data.meta.current_section", true) where the value of data.meta.current_section is "__data.sections.1"
-					// if false; will delete the key/value from the local data model. so fin.util.getDot("data.meta.current_section", false) will delete data.sections[1], where the value of data.meta.current_section is "__data.sections.1"
-		// pass boolean true as the get_key, to parse the last foreign key for the value of the id
-		// so data.meta.current_section, where current_section = '__data.section.1', passing true as the object will return "1"
-		// @new_value used for assigning a new value to the final value
-		getDot: function(obj_path, get_key, object, new_value){
+					// if true; will return the key for a foreign key value, eg: returns 1 from fin.util.dot("data.meta.current_section", true) where the value of data.meta.current_section is "__data.sections.1"
+					// if false; will delete the key/value from the local data model. so fin.util.dot("data.meta.current_section", false) will delete data.sections[1], where the value of data.meta.current_section is "__data.sections.1"
+		// pass boolean true as the get_key, to parse the last foreign key for the value of the id		
+		// @new_value used for assigning a new value to the key at the end of the path
+		dot: function dot(obj_path, get_key, object, new_value){
 
 			if(typeof obj_path !== 'string') {
 				return
@@ -180,12 +180,12 @@ fin = {
 
 			var path = obj_path.split('.');
 
+
 			if(object == undefined) { // this will assert true for null or undefined, assuming the var exists, which it does in this scope, just doesn't have a value
 				path.unshift(window)
 			} else {
 				path[0] = object;
 			}
-			
 			var value;
 			if(path.length > 0) {
 				 
@@ -193,15 +193,9 @@ fin = {
 
 				for(var i=1; i < path.length; i++) {
 					// create a blank node if the key doesn't exist.. if we're trying to access it, it means we want it to exist
-					
-					if(i === path.length - 1 && new_value !== undefined) {
-						value[path[i]] = new_value
-					}
-
 					if(typeof value[path[i]] === 'undefined') {
 						// if it's the end of the chain and new_value is set, then set a new value
-							
-							value[path[i]] = {};
+						value[path[i]] = {};
 						
 					} else if (value[path[i]] === null) {
 						
@@ -209,36 +203,39 @@ fin = {
 					}
 						
 						
+					// check if it's a foreign key
 					if(typeof value[path[i]] === 'string' && value[path[i]].substr(0, 2) === "__") {
+						var dot_string = value[path[i]].substr(2, value[path[i]].length - 2)
 						
-						//value[path[i]] = value[path[i]].substr(2, value[path[i]].length - 2)
-						
-						// is a foreign key
 						if((i+1) == path.length && get_key === true) {
 							// we only want the foreign_key itself
 							if(value[path[i]] !== null) {
-								return getID(value[path[i]])
+								return value[path[i]]//fin.util.getID(value[path[i]])
 							} else {
 								return ""
 							}
 
 						} else if((i+1) == path.length && get_key === false) {
 							// we're deleting the object to which the foreign key refers to
-							var parent_path = value[path[i]].split('.');
-							var key = parent_path.pop();
-							value = fin.util.getDot(parent_path.join('.'))
-							delete value[key]
+							fin.util.dot(dot_string, get_key)
+							// at the end of the foreign key chain the item will be deleted by an alternate condition
+							// then will regressively delete the foreign keys in the chain
+							value[path[i]] = ""
 							return
+						} else if(i === path.length - 1 && new_value !== undefined) {
+							fin.util.dot(dot_string, get_key, null, new_value)
 						} else {
 							// do lookup
-
-							value = fin.util.getDot(value[path[i]]);
+							value = fin.util.dot(dot_string);
 						}
 					} else {
 						// even if it's not a foreign key, we may still want to delete it
 						if ((i+1) == path.length && get_key === false) {
 							delete value[path[i]]
 							return
+						}
+						if(i === path.length - 1 && new_value !== undefined) {
+							value[path[i]] = new_value
 						}
 						value = value[path[i]];
 					}
@@ -252,24 +249,7 @@ fin = {
 		},
 		// helper function, for setting the value for the node of a dotnotation string
 		setDot: function(obj_path, new_value, object) {
-			// TODO: this should be a global function of "approved variables"
-			var path = obj_path.split('.');
-			if(object === undefined) {
-				switch(path[0]) {
-					case 'data':
-						object = data;
-						break;
-					case 'bindings':
-						object = bindings;
-						break;
-					case 'navigate':
-						object = navigate;
-						break;
-					default:
-						object = data
-				}
-			}
-			fin.util.getDot(obj_path, null, data, new_value)
+			fin.util.dot(obj_path, null, object, new_value)
 		},
 		getID: function(fk) {
 			if(fk === null) {
@@ -596,12 +576,12 @@ fin = {
 			  	// handle result
 			  	if(res.meta.status === 200) {
 			  		// handle success
-					if(typeof res.meta.onSuccess !== "undefined" && typeof fin.util.getDot(res.meta.onSuccess) === "function") {
+					if(typeof res.meta.onSuccess !== "undefined" && typeof fin.util.dot(res.meta.onSuccess) === "function") {
 						// dev is handling this form's success
-						fin.util.getDot(res.meta.onSuccess)(res)
+						fin.util.dot(res.meta.onSuccess)(res)
 					} else {
 						// let user know if they specified an onSuccess handler for the form, but forgot to define it.
-						if(typeof res.meta.onSuccess !== "undefined" && typeof fin.util.getDot(res.meta.onSuccess) !== "function") {
+						if(typeof res.meta.onSuccess !== "undefined" && typeof fin.util.dot(res.meta.onSuccess) !== "function") {
 							fin.util.log.error(res.meta.onSuccess + "() is not defined. Using global onSuccess handler")
 						}
 						// generic form success
@@ -616,13 +596,13 @@ fin = {
 					}
 				} else {
 					// handle error
-				  	if(typeof res.meta.onError !== "undefined" && typeof fin.util.getDot(res.meta.onError) === "function") {
+				  	if(typeof res.meta.onError !== "undefined" && typeof fin.util.dot(res.meta.onError) === "function") {
 				  		// dev is handling this form's error
-				  		fin.util.getDot(res.meta.onError)(res)
+				  		fin.util.dot(res.meta.onError)(res)
 
 				  	} else {
 				  		// let user know if they specified an onError handler for the form, but forgot to define it.
-				  		if(typeof res.meta.onError !== "undefined" && typeof fin.util.getDot(res.meta.onError) !== "function") {
+				  		if(typeof res.meta.onError !== "undefined" && typeof fin.util.dot(res.meta.onError) !== "function") {
 							fin.util.log.error(res.meta.onError + "() is not defined. Using global onError handler")
 						}
 				  		// generic form error
@@ -896,7 +876,7 @@ fin = {
 			var dot_location_midpath = selector.replace(/_[^_]*$/, "").replace(/_/g, ".") 
 			
 			// auto namespace exported functions
-			tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin.util.getDot(`fin.fn."+dot_location_midpath+".$1`); fin.fn."+dot_location_midpath+".$1 = function $2(")
+			tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin.util.dot(`fin.fn."+dot_location_midpath+".$1`); fin.fn."+dot_location_midpath+".$1 = function $2(")
 			// mask escaped backticks
 			tmpl = tmpl.replace(/\\`/g, "___escaped_backtick___")
 			// shortcut for fin.ce(` part of the function for more fluid typing and readability
@@ -1154,7 +1134,7 @@ fin = {
 
 	    /*
 	    // sort's a list of objects into a sorted array
-	    	@list: [string] or [object] or [array] like 'fin.data.news.posts' = {338293: {}, 23894723: {}}, uses getDot() function to retrieve the object
+	    	@list: [string] or [object] or [array] like 'fin.data.news.posts' = {338293: {}, 23894723: {}}, uses dot() function to retrieve the object
 	    	@sort_paths: [array] of [strings] indicating the dot path within the object representing nodes to compare for sort,
 	    				specify multiple sort_paths listed by priority.
 	    				[['object.comments.author', 'desc']]
@@ -1163,7 +1143,7 @@ fin = {
 	    sort: function(list, sort_paths) {
 	    	// if list is a string fetc the referenced object
 	    	if(typeof list === "string") {
-	    		list = fin.util.getDot(list);	
+	    		list = fin.util.dot(list);	
 	    	}
 
 	    	var sorted_list = [];
@@ -1182,8 +1162,8 @@ fin = {
 	        //sort the array
 	        sorted_list.sort(function(a, b){
 	        	for(var i=0; i<sort_paths.length; i++) {
-	        		var _a = fin.util.getDot(sort_paths[i][0], null, a);
-	        		var _b = fin.util.getDot(sort_paths[i][0], null, b);
+	        		var _a = fin.util.dot(sort_paths[i][0], null, a);
+	        		var _b = fin.util.dot(sort_paths[i][0], null, b);
 	        		var _direction = sort_paths[i][1];
 	        		// if descending just switch _a and _b
 	        		if(_direction === "desc") {
@@ -1420,9 +1400,9 @@ fin = {
 	                    for(var j=0; j<search_paths[l].length; j++) {
 	                        
 	                        if(must_match_paths[l].length === 0) {
-	                            searchable_content += fin.util.getDot(search_paths[l][j], null, tree[i]);
+	                            searchable_content += fin.util.dot(search_paths[l][j], null, tree[i]);
 	                        } else {
-	                            must_matched_searchabled_content += fin.util.getDot(search_paths[l][j], null, tree[i])
+	                            must_matched_searchabled_content += fin.util.dot(search_paths[l][j], null, tree[i])
 	                        }
 	                    }
 
@@ -1493,7 +1473,7 @@ fin = {
 	           
 	          
 	        
-	        //fin.util.getDot('data.meta.current_section.apps.multichoice')['filtered_questions']
+	        //fin.util.dot('data.meta.current_section.apps.multichoice')['filtered_questions']
 	        setDot(cache, sorted_tree)
 	       
 	        return sorted_tree
@@ -1681,7 +1661,7 @@ $('form[ajaxform]').live('submit', function(e) {
 	var form = $(e.target);
 
 	if(arguments[1] === true) {
-		var validator = fin.util.getDot(form.attr('parseValidate'))
+		var validator = fin.util.dot(form.attr('parseValidate'))
 		if(typeof validator === "function") {
 			//fin.util.log('no! ' + validator(form))
 			return validator(form)
