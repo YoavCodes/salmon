@@ -8,6 +8,24 @@
  * 
  * Updated: 15-11-2014
  * Requires jQuery
+
+//simple bench test
+var start = new Date().getTime();
+for(var i=0; i<50000; i++) {
+	// do a
+}
+
+var end = new Date().getTime()-start;
+console.log(end);
+
+var start = new Date().getTime();
+for(var i=0; i<50000; i++) {
+	// do b
+}
+
+var end = new Date().getTime()-start;
+console.log(end);
+
  */
 ;(function($, window) {
 
@@ -1607,38 +1625,35 @@ eg: for the function
 
 
 	note: when you call curry on a curried function. this will equal func in a closure. 
+	perf: bind ~2x faster than closure curry's nov 2014 chrome
 */
 
 Function.prototype.curry = function curry(named_args) {
-	var that = this;
+	var fn = this;
 
-	if(typeof that.prototype.curry_args !== 'undefined') {		
-		named_args = $.extend(true, {}, that.prototype.curry_args, named_args);
+	if(typeof fn.prototype.curry_args !== 'undefined') {		
+		named_args = $.extend(true, {}, fn.prototype.curry_args, named_args);
 	}
 
 	var unnamed_args = fin.getFunctionArguments([], {}, arguments);
 
-	if(typeof that.prototype.unnamed_args !== 'undefined') {		
-		var previous_unnamed_args = that.prototype.unnamed_args;
+	if(typeof fn.prototype.unnamed_args !== 'undefined') {		
+		var previous_unnamed_args = fn.prototype.unnamed_args;
 		unnamed_args = [].concat(previous_unnamed_args, unnamed_args);
 		arguments = [named_args].concat(unnamed_args);
 	}
 
-	if (typeof that.prototype.curry_fn !== 'undefined') {
-		that = that.prototype.curry_fn;
+	if (typeof fn.prototype.curry_fn !== 'undefined') {
+		fn = fn.prototype.curry_fn;
 	}
-	var params = that.toString().match(/\(([^)]*)\)/)[1].replace(/[ ]*/g, "").split(',');				
+	var params = fn.toString().match(/\(([^)]*)\)/)[1].replace(/[ ]*/g, "").split(',');				
 	var args = fin.getFunctionArguments(params, named_args, arguments);	
+	args.unshift(fn);
+	var func = fn.bind.apply(fn, args);
 	
-	var func;
-	
-	func = function func(){
-		return that.apply(that, args);
-	}
-
 	func.prototype.curry_args = named_args;
 	func.prototype.unnamed_args = unnamed_args;
-	func.prototype.curry_fn = that;
+	func.prototype.curry_fn = fn;
 
 	return func
 }
