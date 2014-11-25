@@ -1,38 +1,44 @@
 describe("fin.dot", function() {
-	
-	Fin();
 
-	fin.data = {
-		users: [
-			{
-				username: "yoav",
-				email: "yoav@something.com",
-				occupation: "software engineer"
-			},
-			{
-				username: "Bob Sagget",
-				email: "bob@something.com",
-				occupation: "House filler"
-			}
-		],
-		sections: [
-			{
-				name: "section 0",
-				type: "radio"
-			},
-			{
-				name: "section 1",
-				type: "div"
-			}
-		],
-		meta: {
-			current_user: "__fin.data.users.1",
-			current_day: "__fin.data.meta.day",
-			day_alias: "__fin.data.meta.current_day",
-			day: "Sunday"
+	beforeEach(function(){
+		Fin();	
 
-		}
-	}
+		fin.data = {
+			users: [
+				{
+					username: "yoav",
+					email: "yoav@something.com",
+					occupation: "software engineer"
+				},
+				{
+					username: "Bob Sagget",
+					email: "bob@something.com",
+					occupation: "House filler"
+				}
+			],
+			sections: [
+				{
+					name: "section 0",
+					type: "radio"
+				},
+				{
+					name: "section 1",
+					type: "div"
+				}
+			],
+			meta: {
+				current_user: "__fin.data.users.1",
+				current_day: "__fin.data.meta.day",
+				day_alias: "__fin.data.meta.current_day",
+				day: "Sunday"
+
+			}
+		}	
+	});
+
+	afterEach(function(){
+		fin = {};
+	});
 	
 
 
