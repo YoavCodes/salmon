@@ -825,25 +825,26 @@ fin = {
 	
     // template cache and rendering shorthand
     /* 
-        renders an underscore.js template and places it into the DOM
-        @element = [String(jQuery css selector) or DOM Object] -- the parent element
+        renders a template and places it into the DOM
+        @parent = [String(jQuery css selector) or DOM Object] -- the parent element
         @selector = [String(jQuery css selector)] -- the css selector for the underscore.js template located in a <script type="text/template"> tag
         @reset = <[boolean]> optional -- whether to clear the parent div first or not
-        @events = [array] -- eg: [['.selector', 'click', function, {}]}]
         @data: [object] data passed to the template in real time, usually from another template or javascript.
         // eg: if you had a template that iterated over blog posts, and wanted a separate template to print out the comments for each post, in that 
         // loop you would pass {comments: post_comments_object} which would then be accessible in the sub template as comments variable
         // in most circumstances you would put data in the main data model, and the template would access it from there
     */
-    render: function (parent, selector, reset, events, data) {
+    render: function (parent, selector, reset, data) {
         // clear the parent if needed
         if(reset === true) {
             $(parent).html('');
         }
         var fragment = document.createDocumentFragment();
         var rootNode = fin.ce('div', {class:'block block_'+selector}, fragment);
+        var events = [];
         try {
-        	$(parent).append(fin._meta.templates[selector]( fragment, rootNode, data ));			
+        	fin._meta.templates[selector]( events, data, rootNode);
+        	//$(parent).append(fin._meta.templates[selector]( fragment, rootNode, data ));			
         } catch(err) {
         	// since the templates have their own try/catch blocks, this should only happen
         	// when the template itself is not a function. ie: it was never found in the DOM or sent by the server.
@@ -861,13 +862,29 @@ fin = {
         		throw("Error: Template ( " + template_name + " ) not found,")  	        		
         	}
         }
-		setTimeout(function(){ 
-			fin.attachEventListeners();
-		}, 0)
+        // when using sub-templates, events should be delegated to the rootNode of the main template.
+        $rootNode = $(rootNode);
+		
+		for(var i=0; i<events.length; i++) {
+			$rootNode.on.apply($rootNode, events[i]);
+		}
 		
 
+		if(typeof parent !== 'undefined') {
+			$(parent).append(fragment)
+		} else {
+			return fragment;
+		}		
 
         
+    },
+    /* render function for use with inline templates
+		@selector: template selector
+		@data: object template can access via data
+     */
+    r: function (selector, data) {
+    	return fin.render(void 0, selector, false, data)
+    	
     },
     /* 
     	the template caching mechanism
@@ -930,7 +947,9 @@ fin = {
 
 		// .html templates need this
 		if(type === 'html') {
-			tmpl = "fin.ce(`div`, {class: ``}, rootNode, `" + tmpl + "`);"
+			tmpl = "var tmpl = [];function print(str){tmpl.push(str)};function addEvent(){__events.push(Array.prototype.slice.call(arguments, 0))};"+
+					"function render(){print(fin.r(arguments[0], arguments[1]))}"+
+					"var $rootNode = $(rootNode); tmpl.push(`"+tmpl+"`);";//"fin.ce(`div`, {class: ``}, rootNode, `" + tmpl + "`);"
 		}
 		// inline [[ inline_js() ]]
 		tmpl = tmpl.replace(/\[\[(([^\[\[]|\r|\n|\r\n)*)]]/g, function($0, $1) {
@@ -939,14 +958,13 @@ fin = {
 		});
 		// wrap inline javascript in closure with print function 
 		// note: print() adds results to p string, which is returned by the closure function and concatenated into the template
-		tmpl = tmpl.replace(/\[\[/g, '`+ (function() {var p=``;var print=function(str){p+=str};');
-		tmpl = tmpl.replace(/\]\]/g, "; return p})()  + `");
+		tmpl = tmpl.replace(/\[\[/g, '`); ');
+		tmpl = tmpl.replace(/\]\]/g, "; tmpl.push(`");
 			
 		// template error stacktrace-ability
 		var template_location = ""
 		// was it loaded from the server, or inline?
 		if(typeof template_string === 'undefined') {
-			//log(template_string)
 			// template was loaded from the DOM
 			template_location = fin._meta.pathname.toString()
 
@@ -979,7 +997,7 @@ fin = {
 		})
 
 		// append return fragment
-		tmpl += ";return rootNode";
+		tmpl += ";for(var i=0; i<tmpl.length; i++){ $rootNode.append( tmpl[i]) };";
 
 		tmpl = tmpl
 			// escape unescaped double quotes
@@ -996,7 +1014,7 @@ fin = {
 				"line = (parseInt(line_array[1], 10) -"+num_lines_remove+") + ' char ' + line_array[2]; "+ 					
 				"fin.log.error(err.message, '"+template_location+"', line);}"; 
 
-		template = new Function(['fragment', 'rootNode', 'data'],tmpl)
+		template = new Function(['__events', 'data', 'rootNode'],tmpl)
 		if(type === 'fn.js') {
 			// if it's function template (with exports requiring auto namespaced function declarations) execute the declarations now
 			template()
@@ -1128,28 +1146,7 @@ fin = {
 		} 
 	},
 	
-    /* 
-        See if a checkbox is checked or not  
-        @element = [String] element's css selector
-        returns: [Boolean] true or false
-    */
-    is_checked: function (element) {
-        return $(element + ":checked").length > 0;
-    },
-
-    /* 
-        returns a truncated string, and appends an ellipsis  
-        @str = [String] the string to truncate
-        @len = [int] the displayed length of the concatenated output
-        returns: [String] concatenated result
-    */
-    truncate: function (str, len) {
-        var _len = len - 3;
-        if(str.length > _len) {
-            str = $.trim(str.substring(0, _len)) + '&hellip;';
-        }
-        return str;
-    },
+    
 
     /*
     // remove leading and trailing slashes for consistency
@@ -1222,161 +1219,7 @@ fin = {
         return sorted_list
     },
 
-    /*
-    // counts the keys in an object
-    */
-    countKeys: function(obj, noun) {
-    	if(typeof obj !== 'object') {
-    		var count = 0
-    	} else {
-    		if(typeof obj.length === 'undefined') {
-    			var count = Object.keys(obj).length;	
-    		} else {
-    			var count = obj.length;
-    		}
-    	}
-        
-        // decide to return number or string, and pluralize
-		if(noun == undefined) {
-			return count;
-		} else {
-			if(count == 0) {
-				return "0 " + noun + "s";	
-			} else if(count == 1) {
-				return "1 " + noun;	
-			} else {
-				return count + " " + noun + "s";	
-			}
-		}
-    },
-
-
-    /*
-    // converts newline characters to <br />
-    */
-    convertNewlines: function(str) {
-        str = str.replace(/\n/g, '<br />');
-        return str
-    },
-
-    /*
-    // returns first argument if plural, or second argument if singular
-    */
-    pluralize: function(quantity, plural, singular) {
-        if(quantity == 0 || quantity > 1) {
-            return plural
-        } else {
-            if(singular !== undefined) {
-                return singular
-            } else {
-                return ""
-            }
-        }
-    },
-
-    /*
-    // returns the contraction for an integer as a string. eg: 3 becomes 3rd
-    */
-    getIntegerContraction: function(integer){
-        integer = parseInt(integer, 10);
-        switch(integer) {
-            case 0:
-                return "";
-                break;
-            case 1:
-                return "1st";
-                break;
-            case 2:
-                return "2nd";
-                break;
-            case 3:
-                return "3rd";
-                break;
-            default:
-                return integer + "th";
-                break;
-        }
-    },
-
-    /* 
-    // converts 16:00 to 4pm
-    */
-    convertFromMilitaryTime: function(military_time) {
-        var military_time_array = military_time.toString().split(':');
-        var military_hour = parseInt(military_time_array[0], 10)
-        var military_minute = parseInt(military_time_array[1], 10)
-        var am_pm = "am";
-        
-        if(military_hour >= 12) {
-            am_pm = "pm";
-        }
-
-        if(military_hour >= 13) {
-            military_hour -= 12
-        }
-       
-        if(military_hour < 10) {
-            military_hour = "0" + military_hour
-        }
-
-        if(military_minute < 10) {
-            military_minute = "0" + military_minute
-        }
-
-        return military_hour + ":" + military_minute + am_pm
-
-    },
-    /*
-    // show modal alert
-        @message: html for the message of the alert
-        @buttons: array of buttons "ok", "cancel", "continue" and corresponding click events as strings [["ok", "alert('what')"]]
-        leave arguments blank to clear alert
-    */
-    alert: function(message, buttons) {
-        if(message === undefined && buttons === undefined) {
-            // hide alert
-            $('#alert_content').html('').css('display', 'none');
-            return;
-        }
-        
-        $('#alert_content').html( _.template( $('#alert_modal').html(), {message: message, buttons: buttons} ) ).css('display', 'block')
-        
-
-        setTimeout(function(){
-            $('#alert_content .content').removeClass('before')
-        }, 10)
-        
-    },
-    /*
-		strip html tags
-		note: if b is specified as an allowable tag, it will preserve <b></b> tags, but will remove tag params ie: <b onclick="javascript()">bold text</b> 
-				will be converted into <b>bold text</b>, this prevents javascript injection in allowable tags
-		@input - html string
-		@allowed "b,i", comma separated string of alloweable tags
-	*/
-	strip_tags: function(input, allowed) {
-		if(input == undefined) {
-			return "";	
-		}
-		// array of allowable tags
-	    allowed = allowed.split(',')
-		input = input	.replace(/<!--[\s\S]*?-->/gi, '') // html comments
-						.replace(/<(\/? *[a-z][a-z0-9]*)\b[^>]*(\/?)>/gi, function($0, $1){ // html tags
-							// for closing tags, remove the slash before checking if the tag is allowed
-							var tag = $1.replace('/', '')
-							if($.inArray(tag, allowed) > -1) {
-								// allowed tag
-								var self_closed = ""
-								if($0.indexOf('/>') > -1) {
-									self_closed = "/"
-								}
-								return "<" + $1 + self_closed + ">"
-							} else {
-								return ''
-							}
-						})
-		return input
-	},
+    
 
     /*
     // implementation of half text search for relevance searching through the data model.

@@ -150,6 +150,183 @@ $.extend(true, Fin.prototype.plugins, {
 
 		return output
 	},*/
+	/* 
+        See if a checkbox is checked or not  
+        @element = [String] element's css selector
+        returns: [Boolean] true or false
+    */
+   /* is_checked: function (element) {
+        return $(element + ":checked").length > 0;
+    },*/
+
+    /* 
+        returns a truncated string, and appends an ellipsis  
+        @str = [String] the string to truncate
+        @len = [int] the displayed length of the concatenated output
+        returns: [String] concatenated result
+    */
+    /*truncate: function (str, len) {
+        var _len = len - 3;
+        if(str.length > _len) {
+            str = $.trim(str.substring(0, _len)) + '&hellip;';
+        }
+        return str;
+    },*/
+    /*
+    // counts the keys in an object
+    */
+    /*countKeys: function(obj, noun) {
+    	if(typeof obj !== 'object') {
+    		var count = 0
+    	} else {
+    		if(typeof obj.length === 'undefined') {
+    			var count = Object.keys(obj).length;	
+    		} else {
+    			var count = obj.length;
+    		}
+    	}
+        
+        // decide to return number or string, and pluralize
+		if(noun == undefined) {
+			return count;
+		} else {
+			if(count == 0) {
+				return "0 " + noun + "s";	
+			} else if(count == 1) {
+				return "1 " + noun;	
+			} else {
+				return count + " " + noun + "s";	
+			}
+		}
+    },*/
+
+
+    /*
+    // converts newline characters to <br />
+    */
+    /*convertNewlines: function(str) {
+        str = str.replace(/\n/g, '<br />');
+        return str
+    },*/
+
+    /*
+    // returns first argument if plural, or second argument if singular
+    */
+    /*pluralize: function(quantity, plural, singular) {
+        if(quantity == 0 || quantity > 1) {
+            return plural
+        } else {
+            if(singular !== undefined) {
+                return singular
+            } else {
+                return ""
+            }
+        }
+    },*/
+
+    /*
+    // returns the contraction for an integer as a string. eg: 3 becomes 3rd
+    */
+    /*getIntegerContraction: function(integer){
+        integer = parseInt(integer, 10);
+        switch(integer) {
+            case 0:
+                return "";
+                break;
+            case 1:
+                return "1st";
+                break;
+            case 2:
+                return "2nd";
+                break;
+            case 3:
+                return "3rd";
+                break;
+            default:
+                return integer + "th";
+                break;
+        }
+    },*/
+
+    /* 
+    // converts 16:00 to 4pm
+    */
+    /*convertFromMilitaryTime: function(military_time) {
+        var military_time_array = military_time.toString().split(':');
+        var military_hour = parseInt(military_time_array[0], 10)
+        var military_minute = parseInt(military_time_array[1], 10)
+        var am_pm = "am";
+        
+        if(military_hour >= 12) {
+            am_pm = "pm";
+        }
+
+        if(military_hour >= 13) {
+            military_hour -= 12
+        }
+       
+        if(military_hour < 10) {
+            military_hour = "0" + military_hour
+        }
+
+        if(military_minute < 10) {
+            military_minute = "0" + military_minute
+        }
+
+        return military_hour + ":" + military_minute + am_pm
+
+    },*/
+    /*
+    // show modal alert
+        @message: html for the message of the alert
+        @buttons: array of buttons "ok", "cancel", "continue" and corresponding click events as strings [["ok", "alert('what')"]]
+        leave arguments blank to clear alert
+    */
+    /*alert: function(message, buttons) {
+        if(message === undefined && buttons === undefined) {
+            // hide alert
+            $('#alert_content').html('').css('display', 'none');
+            return;
+        }
+        
+        $('#alert_content').html( _.template( $('#alert_modal').html(), {message: message, buttons: buttons} ) ).css('display', 'block')
+        
+
+        setTimeout(function(){
+            $('#alert_content .content').removeClass('before')
+        }, 10)
+        
+    },*/
+    /*
+		strip html tags
+		note: if b is specified as an allowable tag, it will preserve <b></b> tags, but will remove tag params ie: <b onclick="javascript()">bold text</b> 
+				will be converted into <b>bold text</b>, this prevents javascript injection in allowable tags
+		@input - html string
+		@allowed "b,i", comma separated string of alloweable tags
+	*/
+	/*strip_tags: function(input, allowed) {
+		if(input == undefined) {
+			return "";	
+		}
+		// array of allowable tags
+	    allowed = allowed.split(',')
+		input = input	.replace(/<!--[\s\S]*?-->/gi, '') // html comments
+						.replace(/<(\/? *[a-z][a-z0-9]*)\b[^>]*(\/?)>/gi, function($0, $1){ // html tags
+							// for closing tags, remove the slash before checking if the tag is allowed
+							var tag = $1.replace('/', '')
+							if($.inArray(tag, allowed) > -1) {
+								// allowed tag
+								var self_closed = ""
+								if($0.indexOf('/>') > -1) {
+									self_closed = "/"
+								}
+								return "<" + $1 + self_closed + ">"
+							} else {
+								return ''
+							}
+						})
+		return input
+	}*/
 })
 
 })(jQuery, Fin);
