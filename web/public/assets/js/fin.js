@@ -181,7 +181,7 @@ fin = {
 		}
 	},
 	
-	log: log, // shortcut for consistency with the backend
+	//log: log, // shortcut for consistency with the backend
 	// todo: cleanup dot function now that unit tests are written and passing
 	// function for getting a dot notation path of an object
 	// @obj_path: String, dot notation String eg: "data.meta.current_section.name"
@@ -462,7 +462,7 @@ fin = {
 				.length, window.location.search.length);	
 		}
 		// parse hash segments
-		fin._meta.hashbang = fin.removeEndSlashes(fin._meta.hashbang);
+		fin._meta.hashbang = fin._meta.hashbang.replace(/(^\/)|(\/$)/, ""); // regex: remove end slashes
 		//split
 		segments = fin._meta.hashbang.split("/");
 		
@@ -816,12 +816,90 @@ fin = {
 			}
 		}
 	},
-	// login_success's sole purpose is to nav to a prelogin state, so that when hitting back, it will serve as a wall which the user cannot go further back.
-	// this prevents a user from hitting "back" to the login screen while they're still logged in. 
-	/*loginResultHandler: function(res) {
-		nav('login_success');
-		login(res)
-	},*/
+	// form validation helpers
+	v: {
+		// @form, a form element, likely already jqueryified.
+		// @name, name of the element
+		// @fn, the function that will do validation, should return an array [bool(pass/fail), string(msg)]
+		// if a validator fails it will add a data-validation-error attribute to that field, which can be displayed
+		// at your discretion
+		validate: function(form, name, fn) {
+			var field = $(form).find('input[name="'+name+'"]');
+			var value = field.val();			
+			var result = fn(field, name, value); // should
+			if(result.length === 2) {
+				field.attr("data-validation-error", result[1]); // set the message
+			} else {
+				field.removeAttr("data-validation-error");
+			}			
+			return result[0];
+		},
+		strlen: function(form, name, min, max) {
+			min = min||0;
+			max = max||Infinity;
+			try {
+				return fin.v.validate(form, name, function(field, name, value){	
+					log(value)
+					if(value.length < min || value.length > max) { 
+						return [false, name+" required length of "+min+"-"+max];
+					}
+					return [true]
+				})
+			} catch(err) {
+				fin.log.error("error in fin.v.strlen validator: "+err.message);
+				return false
+			}
+		}
+	},
+	// ajax form submit handler. use [[ addEvent('submit', '#loginForm', fin.submit) ]] or [[ ajax('#loginForm') ]] in templates with ajaxforms
+	// to ajaxify them.
+	submit: function(e) {
+		var form = $(e.target);
+
+		var validator = fin.dot(form.attr('validator'));
+
+		if(typeof validator === 'function') {
+			// validator function set as <form validator="fin.fn.your_form_validator"></form>
+			// passed a reference to the Jqueried form element in case you need to modify it before submitting
+			// for convenience a jquery selected array of form inputs that may need to be validated.	
+			if(validator(form, form.children().not("input[type='submit']")) !== true) {
+				// validation failed				
+				e.preventDefault();	
+				e.stopImmediatePropagation();
+				// validation failed, execute the error display function if one was specified as a form attribute
+				// otherwise exist
+				var errorDisplayFn = fin.dot(form.attr('errorDisplayFn'));
+				if(typeof errorDisplayFn === 'function') {
+					errorDisplayFn(form);
+				}
+				return 
+			}
+ 		}
+
+
+		//return true
+		var num_persistant_iframes = $('.persistant').length;
+		// create an iframe that will persist until server response
+		var ajaxiframe_id = "ajaxpersistantiframe"+num_persistant_iframes;;
+
+		var targetiframe_id = "ajaxpersistantiframe"+(num_persistant_iframes-1);
+
+		// setup form
+		form.attr('target', targetiframe_id)
+
+		// hidden inputs
+		form.append('<input type="hidden" name="pathname" value="'+fin._meta.pathname+'" />' +
+							'<input type="hidden" name="hashbang" value="'+form.attr('hashbang')+'" />' +
+							'<input type="hidden" name="command" value="'+form.attr('command')+'" />' +
+							'<input type="hidden" name="onSuccess" value="'+form.attr('onSuccess')+'" />' +
+							'<input type="hidden" name="onError" value="'+form.attr('onError')+'" />' +
+							'<input type="hidden" name="ajaxiframe_id" value="'+targetiframe_id+'" />');
+	
+		// update hidden inputs	
+		
+		$('body').append('<iframe id="'+ajaxiframe_id+'" name="'+ajaxiframe_id+'" style="display:none;" class="ajaxformiframe persistant"></iframe>');
+		
+	},
 	
     // template cache and rendering shorthand
     /* 
@@ -840,7 +918,10 @@ fin = {
             $(parent).html('');
         }
         var fragment = document.createDocumentFragment();
-        var rootNode = fin.ce('div', {class:'block block_'+selector}, fragment);
+        //var rootNode = fin.ce('div', {class:'block block_'+selector}, fragment);
+        var rootNode = $('<div class="block block_'+selector+'"></div>');
+        $(fragment).append(rootNode);
+
         var events = [];
         try {
         	fin._meta.templates[selector]( events, data, rootNode);
@@ -933,9 +1014,9 @@ fin = {
 		}
 		tmpl = JSON.stringify(tmpl);
 		tmpl = tmpl.slice(1, tmpl.length-1); // remove extra double-quotes added by JSON.stringify				
-		// exported functions should ignore the filename.fn.js in namespacing.
-		// so exports.test_function in templates/news/posts/functions.fn.js
-		// gets namespaced to fin.fn.news.posts.test_function()
+		
+		// so exports.test_function in templates/news/posts/handlers.js
+		// gets namespaced to fin.fn.news.posts.handlers.test_function()
 		var dot_location_midpath = selector.replace(/_[^_]*$/, "").replace(/_/g, ".") 
 		
 		// auto namespace exported functions
@@ -943,7 +1024,7 @@ fin = {
 		// mask escaped backticks
 		tmpl = tmpl.replace(/\\`/g, "___escaped_backtick___")
 		// shortcut for fin.ce(` part of the function for more fluid typing and readability
-		tmpl = tmpl.replace(/```/g, "fin.ce(`")
+		//tmpl = tmpl.replace(/```/g, "fin.ce(`")
 
 		// .html templates need this
 		if(type === 'html') {
@@ -953,8 +1034,8 @@ fin = {
 		}
 		// inline [[ inline_js() ]]
 		tmpl = tmpl.replace(/\[\[(([^\[\[]|\r|\n|\r\n)*)]]/g, function($0, $1) {
-			// remove newlines from inline javascript				
-			return $0.replace(/(\\r\\n|\\n|\\r)/g, "");
+			// replace escaped newlines in [[ inline_js() ]] with a real newline character			
+			return $0.replace(/(\\r\\n|\\n|\\r)/g, "\n");
 		});
 		// wrap inline javascript in closure with print function 
 		// note: print() adds results to p string, which is returned by the closure function and concatenated into the template
@@ -1024,142 +1105,6 @@ fin = {
 
 		}
 
-    },
-    // core templating functions
-    /*
-		// createElement 
-		@type: string - type of element
-		@attr: array {id: 'btn1'} - array of attributes
-		@parent: string "#menu"- parent (jquery selectors) to attach to
-		@content: String - innerHTML of element
-		@events: object { click: function(e){alert('test'+e.data.ind)} } - events to add to the element
-		@data: object {ind:i} - e.data.ind = 0 naughty scope variables like iterators that you'd like to pass to the event handler as a frozen snapshot of the variable's value, 
-		note: if you're adding an event, supply an id in the attributes
-		ex:
-		var t = ce('div', {}, '#content', 't');
-		ce('div', {}, t, 'h');
-		ce('div', {}, t, 'i');
-		ce('div', {}, t, 's');
-		OR
-		ce('div', {}, ce('div', {}, ce('div', {}, ce('div', {}, '#content', 't'), 'h'), 'i'), 's');
-		
-		template.js:
-		var other_var = `clicked `;
-	    for(var i=0; i<5; i++) {
-	        ce(`div`, {id: `id_`+i, class: `s`}, fragment, i + `hello there!, <a style="cursor: pointer; font-weight: 
-	            bold;">Click here to nav to welcome again and rerender with templates 
-	            from the server.<a>`, { click: function(e){log(other_var + e.data.msg)} }, {msg: i} );
-	    }
-		// clicking on each sentence will output "clicked 0", "clicked 1", and so on. 
-
-
-	*/
-    createElement: function(type, attr, parent, content, events, data) {
-		var e = document.createElement(type);
-		for(var i in attr) {
-			e.setAttribute(i, attr[i])
-		}
-		if(type === 'form' && attr['ajaxform'] === true) {
-			// if it's an ajaxform, be safe and create an iframe to target
-			// this will catch the form if the submit processing fails to prevent a page reload.
-			var iframe = document.createElement('iframe')
-			iframe.setAttribute('id', "ajaxformiframe"+attr['id'])
-			iframe.setAttribute('class', 'ajaxformiframe')
-			fin.ach(parent, [iframe])
-
-			// create hidden fields
-			fin.ce('input', {type: 'hidden', name: 'pathname', value: ''}, e)
-			fin.ce('input', {type: 'hidden', name: 'hashbang', value: ''}, e)
-			fin.ce('input', {type: 'hidden', name: 'command', value: ''}, e)
-			fin.ce('input', {type: 'hidden', name: 'onSuccess', value: ''}, e)
-			fin.ce('input', {type: 'hidden', name: 'onError', value: ''}, e)
-			fin.ce('input', {type: 'hidden', name: 'ajaxiframe_id', value: ''}, e)
-
-			// setup form
-			e.setAttribute('target', "ajaxformiframe"+attr['id'])
-			e.setAttribute('action', ":"+window.location.port+'/0')
-		}
-		if(content != undefined && content != "") {
-			e.innerHTML = content;
-		}
-		for(var j in events) {
-			fin._meta.assigned_events.push({id:attr['id'], "event": j, "handler": events[j], data:data})	
-		}
-		
-		
-		if(parent != undefined && parent != "") {
-			fin.ach(parent, [e]);	
-		}
-		return e;
-	},
-    /*
-		move code to the end of the execution queue
-    */
-    defer: function(func, delay){
-    	if(typeof delay === 'undefined') {
-    		delay = 0
-    	}
-    	setTimeout(func, delay)
-    },
-
-
-	/*
-		// loop through events, and attach them to DOM nodes as specificied by ce()
-		note: called after DOM ready on refresh
-	*/
-	attachEventListeners: function() {
-		//log(fin._meta.assigned_events)
-		for(var i in fin._meta.assigned_events) {
-		
-			
-			$('#'+fin._meta.assigned_events[i].id).bind(fin._meta.assigned_events[i].event, fin._meta.assigned_events[i].data, fin._meta.assigned_events[i].handler);	
-		}
-
-		fin._meta.assigned_events = new Array();
-
-	},
-	/*
-		// appendChild Helper
-		@parent - jquery selector
-		@children - array of children elements to attach to parent
-		@prepend - boolean, whether to prepend the element (default is false and will append the element)
-		note: in most cases called automatically by ce()
-	*/
-	appendChild: function(parent, children, prepend) {
-		// if we're prepending reverse the order of children so that the order specified will == their order in the DOM
-		if(prepend === true) {
-			children.reverse();	
-		}
-		// loop through children and add them to the parent
-		for(var i in children) {
-			if(prepend === true) {				
-				$(parent).prepend(children[i]);
-			} else {
-				if(typeof(parent) == "string") {
-					// if parent is a string, treat as a jQuery selector
-					$(parent).append(children[i]);	
-				} else {
-					// if parent is an object treat as a documentFragment
-					parent.appendChild(children[i])	
-				}	
-			}
-		} 
-	},
-	
-    
-
-    /*
-    // remove leading and trailing slashes for consistency
-    @path - a uri or hash string to remove slashes from
-    */
-    removeEndSlashes: function(path) {
-        if(path.charAt(0) == "/") {
-            path = path.toString().substr(1, path.length);
-        }
-        if(path.charAt(path.length-1) == "/") {
-            path = path.toString().substr(0, path.length-1);
-        }
-        return path;
     },
 
     /*
@@ -1401,13 +1346,7 @@ fin = {
     	}
     }
 }
-// refine HighFin object
-// shortcuts to minimize typing
-$.extend(true, fin, {
-	ce: fin.createElement,
-	ach: fin.appendChild,
-	log: fin.log,
-})
+
 
 /****************************/
 
@@ -1511,74 +1450,15 @@ Function.prototype.curry = function curry(named_args) {
 	return func
 }
 
-
-
-
-fin._meta.pathname = fin.removeEndSlashes(window.location.pathname.toString())	
-
-
+fin._meta.pathname = window.location.pathname.toString().replace(/(^\/)|(\/$)/, ""); // regex: remove end slashes
 
 // load plugins
 $.extend(true, fin.util, Fin.prototype.plugins);
 
-
-// ajax form capture
-
-// @parseValidate has to be a string reference to a function that returns true or false, it is passed the jquery selected form object
-$('form[ajaxform]').live('submit', function(e) {
-	var form = $(e.target);
-
-	if(arguments[1] === true) {
-		var validator = fin.dot(form.attr('parseValidate'))
-		if(typeof validator === "function") {
-			//fin.log('no! ' + validator(form))
-			return validator(form)
-		} else {
-			return true
-		}
-	}
-
-	//return true
-	var num_persistant_iframes = $('.persistant').length
-	// create an iframe that will persist until server response
-	var ajaxiframe_id = "ajaxpersistantiframe"+num_persistant_iframes;
-
-	var ajaxiframe = fin.ce('iframe', {id: ajaxiframe_id,
-					name: ajaxiframe_id,
-					class: "ajaxformiframe persistant"}, 'body', '',
-					{
-						load: function() {
-							log('')
-						}
-					})
-	// setup form
-	form.attr('target', ajaxiframe_id)
-
-	
-	// update hidden inputs	
-	form.find("[name='pathname']").val(fin._meta.pathname)
-	form.find("[name='hashbang']").val(form.attr('hashbang'))
-	form.find("[name='command']").val(form.attr('command'))
-	form.find("[name='onSuccess']").val(form.attr('onSuccess'))
-	form.find("[name='onError']").val(form.attr('onError'))
-	form.find("[name='ajaxiframe_id']").val(ajaxiframe_id)
-	
-	setTimeout(function(){
-		try {
-			form.trigger('submit', [true])
-		} catch(err) {
-			fin.log.error(err.message)
-			fin.log.solution('If submit is not a function, do not set the name or id of any inputs in your ajaxform "submit"')
-		}
-	},500)
-
-	return false
-})
-
-
-
-
 $(document).ready(function(){
+	// the starter ajax response iframe
+	$('body').append('<iframe id="ajaxpersistantiframe0" name="ajaxpersistantiframe0" style="display:none;" class="ajaxformiframe persistant"></iframe>');
+
 	window.onbeforeunload = fin.onbeforeunload;
   	
   	//$(window).hashchange(fin.onHashchange)
@@ -1594,17 +1474,9 @@ $(document).ready(function(){
 
 	fin.loading(false)
 
-	
-	
 });
 
 }
-
-
-
-
-//window.fin = fin;
-
 
 })(jQuery, window);
 
