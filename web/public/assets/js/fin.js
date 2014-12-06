@@ -1023,14 +1023,19 @@ fin = {
 		tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin.dot(`fin.fn."+dot_location_midpath+".$1`); fin.fn."+dot_location_midpath+".$1 = function $2(")
 		// mask escaped backticks
 		tmpl = tmpl.replace(/\\`/g, "___escaped_backtick___")
-		// shortcut for fin.ce(` part of the function for more fluid typing and readability
-		//tmpl = tmpl.replace(/```/g, "fin.ce(`")
 
 		// .html templates need this
 		if(type === 'html') {
-			tmpl = "var tmpl = [];function print(str){tmpl.push(str)};function addEvent(){__events.push(Array.prototype.slice.call(arguments, 0))};"+
-					"function render(){print(fin.r(arguments[0], arguments[1]))}"+
-					"var $rootNode = $(rootNode); tmpl.push(`"+tmpl+"`);";//"fin.ce(`div`, {class: ``}, rootNode, `" + tmpl + "`);"
+					// 
+			tmpl = "var tmpl = [];"+
+					// print() append a string to template string at that location, for use inside [[ inline_js() ]] blocks
+					// @str: string to be added to the template
+					"function print(str){tmpl.push(str)};function addEvent(){__events.push(Array.prototype.slice.call(arguments, 0))};"+
+					// render() prints a placeholder div inline that will be replaced LATER with the subtemplate fragment rendered NOW inline
+					// @st string, subtemplate selector. ie: `welcome` for a template in /templates/welcome.html
+					"var subtmpls = []; var subid=0; function render(st, stdata){ var sid = `___subtmpl_id`+subid;subid++; print(`<div id='`+sid+`'></div>`); subtmpls.push({id: sid, fragment: fin.r(st, stdata)})};"+
+					// wrap the template
+					"var $rootNode = $(rootNode); tmpl.push(`"+tmpl+"`);";
 		}
 		// inline [[ inline_js() ]]
 		tmpl = tmpl.replace(/\[\[(([^\[\[]|\r|\n|\r\n)*)]]/g, function($0, $1) {
@@ -1077,8 +1082,11 @@ fin = {
 			return _string
 		})
 
-		// append return fragment
-		tmpl += ";for(var i=0; i<tmpl.length; i++){ $rootNode.append( tmpl[i]) };";
+		// template compilation functions
+		// join the template and append
+		tmpl += ";tmpl = tmpl.join(``);$rootNode.append(tmpl);"+
+				// loop over rendered subtemplates replacing their placeholder tags with their rendered fragments
+				"for(var i=0; i<subtmpls.length; i++) { $rootNode.find(`#`+subtmpls[i].id).replaceWith(subtmpls[i].fragment) };";
 
 		tmpl = tmpl
 			// escape unescaped double quotes

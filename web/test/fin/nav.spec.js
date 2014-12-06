@@ -15,9 +15,10 @@ describe("fin.nav", function(){
 				.append('<script type="text/template" class="cleanup" id="template_inlinejs-html">inlinejs template\n[[ \nfor(var k=0; k<5; k++){ \nprint(k); \n}; \n ]][[ for(var k=0; k<5; k++){ print(k); };  ]][[ ]]</script>')
 				.append('<script type="text/template" class="cleanup" id="template_disjointed-html">disjointed template[[ for(var k=0; k<5; k++){ ]]{{k}}[[}]]</script>')
 				// nested templates
-				.append('<script type="text/template" class="cleanup" id="template_inlinerenderparent-html">inlinerenderparent template[[ print(fin.r(`inlinerenderchild1`, {test: `toast`})) ]] [[ render(`inlinerenderchild2`, {test: `fight`}) ]] [[ render(`inlinerenderchild2`, {test: `feast`}) ]]</script>')
+				.append('<script type="text/template" class="cleanup" id="template_inlinerenderparent-html">inlinerenderparent template[[ render(`inlinerenderchild1`, {test: `toast`}) ]] [[ render(`inlinerenderchild2`, {test: `fight`}) ]] [[ render(`inlinerenderchild2`, {test: `feast`}) ]]</script>')
 				.append('<script type="text/template" class="cleanup" id="template_inlinerenderchild1-html">inlinerenderchild1 template<button class="clickme">click me {{data.test}}</button>[[ addEvent(`click`, `.clickme`, {what: `mop`}, fin.fn.clickhandler) ]]</script>')
 				.append('<script type="text/template" class="cleanup" id="template_inlinerenderchild2-html">inlinerenderchild2 template<button class="clickme">click me {{data.test}}</button>[[ addEvent(`click`, `.clickme`, {what: `mo`}, fin.fn.clickhandler) ]]</script>')
+				.append('<script type="text/template" class="cleanup" id="template_inlinerenderopentags-html">inlinerenderopentags template <b>[[ render(`inlinerenderchild2`, {test: `fight`}) ]]</b></script>')
 
 
 
@@ -61,6 +62,9 @@ describe("fin.nav", function(){
 				},
 				inlinerender: {
 					container: ['inlinerenderparent']
+				},
+				opentags: {
+					container: ['inlinerenderopentags']
 				}
 
 			},
@@ -162,7 +166,7 @@ describe("fin.nav", function(){
 	});
 
 	it("should render inline templates", function() {
-		fin.nav("inlinerender");		
+		fin.nav("inlinerender");
 		expect($("#container .block.block_inlinerenderchild1").html()).toBe('inlinerenderchild1 template<button class="clickme">click me toast</button>');
 		expect($("#container .block.block_inlinerenderchild2").eq(0).html()).toBe('inlinerenderchild2 template<button class="clickme">click me fight</button>');
 		expect($("#container .block.block_inlinerenderchild2").eq(1).html()).toBe('inlinerenderchild2 template<button class="clickme">click me feast</button>');
@@ -177,6 +181,11 @@ describe("fin.nav", function(){
 		$("#container .block.block_inlinerenderchild1 .clickme").click();
 		expect(fin.meta.clicklog).toBe("momomop")
 	});
+
+	it("should not close open tags when rendering inline templates", function() {
+		fin.nav("opentags");
+		expect($("#container .block.block_inlinerenderopentags b").html()).toBe('<div class="block block_inlinerenderchild2">inlinerenderchild2 template<button class="clickme">click me fight</button></div>')
+	})
 
 	// todo: updating docs https://github.com/YoavGivati/salmon/wiki/Templating-Overview
 	// todo: remove .js templates and simplify code.
