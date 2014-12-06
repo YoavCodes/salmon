@@ -76,7 +76,19 @@ describe("fin.dot", function() {
 				}
 			}
 		};
-		var lookup = fin.dot("obj.any.dot.path", null, obj);
+		var lookup = fin.dot("any.dot.path", null, obj);
+		expect(lookup).toBe("works");
+	})
+
+	it("should allow shorthand syntax when specifying an arbitrary object", function(){
+		var obj = {
+			any: {
+				dot: {
+					path: "works"
+				}
+			}
+		};
+		var lookup = fin.dot("any.dot.path", obj);
 		expect(lookup).toBe("works");
 	})
 
@@ -91,7 +103,7 @@ describe("fin.dot", function() {
 				path: "__test_obj.path.here"
 			}
 		};
-		var lookup_fk = fin.dot("obj.fks.path", null, obj);
+		var lookup_fk = fin.dot("fks.path", null, obj);
 		expect(lookup_fk).toBe("Monday");
 	})
 
@@ -105,7 +117,7 @@ describe("fin.dot", function() {
 		};
 		expect(obj.any.dot.path).toBe("works")
 		
-		fin.dot("obj.any.dot.path", false, obj); // delete key/value
+		fin.dot("any.dot.path", false, obj); // delete key/value
 		
 		expect(obj.any.dot.path).toBeUndefined() 
 	})
@@ -129,7 +141,7 @@ describe("fin.dot", function() {
 		expect(week.meta.today).toBe("__week.days.mon");
 		expect(week.days.mon).toBe("Monday");
 		
-		fin.dot("obj.alias.current_day", false, obj); // delete window.week.days.mon via two foreign key hops
+		fin.dot("alias.current_day", false, obj); // delete window.week.days.mon via two foreign key hops
 
 		expect(obj.alias.current_day).toBe("");	// foreign key should be changed to empty string ie: unlinked
 		expect(week.meta.today).toBe(""); // foreign key on 2nd hop should be changed to empty string ie: unlinked
@@ -150,7 +162,7 @@ describe("fin.dot", function() {
 				path: "here"
 			}
 		}
-		fin.dot("obj.any.path", null, obj, "test");
+		fin.dot("any.path", null, obj, "test");
 		expect(obj.any.path).toBe("test")
 	})
 
@@ -175,7 +187,7 @@ describe("fin.dot", function() {
 		}
 		expect(tmp_obj.any.path).toBe("peanut butter")
 
-		fin.dot("obj.any.fks.fk", null, obj, "jam")
+		fin.dot("any.fks.fk", null, obj, "jam")
 		
 		expect(obj.any.fks.fk).toBe("__tmp_obj.any.path") // foreign key should be unchanged
 		expect(tmp_obj.any.path).toBe("jam")
@@ -189,7 +201,7 @@ describe("fin.dot", function() {
 				}
 			}
 		}
-		var current_user_username = fin.dot("obj.any.dot.path", null, obj)
+		var current_user_username = fin.dot("any.dot.path", null, obj)
 		expect(current_user_username).toBe("Bob Sagget")
 	})
 

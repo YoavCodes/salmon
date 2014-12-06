@@ -181,13 +181,19 @@ fin = {
 		}
 	},
 	
-	//log: log, // shortcut for consistency with the backend
-	// todo: cleanup dot function now that unit tests are written and passing
+	
+	// dot(obj_path) // assumed obj_path root is relative to window
+	// dot(obj_path, get_key) 
+	// dot(obj_path, get_key, object)
+	// dot(obj_path, get_key, object, new_value) 
+	// dot(obj_path, object)
+	// dot(obj_path, object, new_value) 
 	// function for getting a dot notation path of an object
 	// @obj_path: String, dot notation String eg: "data.meta.current_section.name"
 	// @get_key: Boolean, 
 				// if true; will return the key for a foreign key value, eg: returns 1 from fin.dot("data.meta.current_section", true) where the value of data.meta.current_section is "__data.sections.1"
 				// if false; will delete the key/value from the local data model. so fin.dot("data.meta.current_section", false) will delete data.sections[1], where the value of data.meta.current_section is "__data.sections.1"
+				// you can optionally leave get_key out ie: dot(obj_path, object) instead of dot(obj_path, null, object)
 	// pass boolean true as the get_key, to parse the last foreign key for the value of the id		
 	// @new_value used for assigning a new value to the key at the end of the path
 	dot: function dot(obj_path, get_key, object, new_value){
@@ -196,13 +202,22 @@ fin = {
 			return
 		}
 
+		// allow alias syntax where dot(obj_path, object) instead of dot(obj_path, null, object)
+		// ie: instead of specifying get_key as null in the function call, 
+		if(typeof arguments[1] === 'object' && arguments[1] !== null) {
+			// shift variables over
+			new_value = object;
+			object = get_key;
+			get_key = null;
+		}
+
 		var path = obj_path.split('.');
 
 
 		if(object == undefined) { // this will assert true for null or undefined, assuming the var exists, which it does in this scope, just doesn't have a value
-			path.unshift(window)
+			path.unshift(window);
 		} else {
-			path[0] = object;
+			path.unshift(object);
 		}
 		var value;
 		if(path.length > 0) {
@@ -278,6 +293,171 @@ fin = {
 		// now just return the last part of the foreign_key ie: the key (in most cases an int id)
 		return key[key.length-1];
 	},
+	/* 
+		Object filtering		
+	 */
+	
+	// @dotPath: string dot notation path for the object
+	// @rootObject: optionally specify an object other than window for the relative dotPath argument
+	get: function(dotPath, rootObject) {		
+		var filter = {
+			prop: "", // dot notation path relative to dotPath
+			val: "", // the value to compare it to, could be any type incl regex.
+			method: "" // the method of comparison ie: is(), contains, regex, etc.
+		}
+
+		return {
+			obj: fin.dot(dotPath, rootObject),
+			filters: [ [] ], // [[this, andthis], [orthis, andthis]]
+			current_filter: { or: 0, and: 0 },
+			/*
+				where(), and(), or() all create a new filter at the appropriate position in the filter list
+			*/
+			where: function(filterPath) {
+				var f = Object.create(filter);
+				f.prop = filterPath;								
+				this.filters[this.current_filter.or][this.current_filter.and] = f;
+				return this
+			},
+			and: function(filterPath) {
+				this.current_filter.and++;
+				this.where(filterPath);
+				return this
+			},
+			or: function(filterPath) {
+				this.current_filter.or++;
+				this.current_filter.and = 0;
+				this.filters.push([]);
+				this.where(filterPath);
+				return this
+			},
+			/*
+				comparison methods configure the filter
+			*/
+			// strict equality
+			is: function(value) {
+				var f = this.filters[this.current_filter.or][this.current_filter.and];
+				f.val = value;
+				f.method = function(prop, val) {
+					if(prop === val) {
+						return 1
+					} else {
+						return false
+					}
+				}
+				return this
+			},
+			// truthy 
+			isTruthy: function(value) {
+				var f = this.filters[this.current_filter.or][this.current_filter.and];
+				f.val = value;
+				f.method = function(prop, val) {
+					if(prop === val) {
+						// exact match
+						return 2
+					} else if(prop == val) {
+						// truthy match
+						return 1
+					} else {
+						// no match
+						return false
+					}
+				}
+				return this
+			},
+			// string contains matches for a substring or regex
+			// @value: normally a regular expression
+			// 		if you pass in a string, it will construct a regular expression with the g flag
+			contains: function(value) {
+				var f = this.filters[this.current_filter.or][this.current_filter.and];
+				f.val = value;
+				f.method = function(prop, val) {
+					if(typeof val === 'string') {
+						var val = new RegExp(val, 'g');
+					}
+					matches = prop.match(val);					
+					if(matches.length > 0) {
+						return matches.length
+					} else {
+						return false
+					}
+				}
+				return this
+			},
+			// generic filter method, lets you pass in your own
+			// fn(prop, val) where prop is the resolved value of the property to compare
+			// and val is the value to compare it against, originally passed into the compare() function as value
+			// fn() must return a number describing the "relevance" or strength of the match. if it's not a match return false
+			// note: the fn() f.method will actually be called in sort along with all the other and() and or() filters
+
+			compare: function(value, fn) {
+				var f = this.filters[this.current_filter.or][this.current_filter.and];
+				f.val = val;
+				f.method = fn;
+				return this
+			},
+			sort: function(sort_method) {
+				// apply filters
+				var results = [];
+				var relevance_array = []; // [result, relevance]temporary array for storing the relevance of each match. for sorting
+				// loop through dataset
+				for(var key in this.obj) {
+					var result = this.obj[key];
+					var is_match = false;
+					var total_relevance = 0;
+					// loop through or[] and and[] filters
+					// if a filter fails to match, it will break to the next or[] group
+					// so all the and[] filters in at least one or group must match to push it to the array					
+					or_matching:
+					for(var or=0; or<this.filters.length; or++) {
+						var or_group = this.filters[or];
+						for(var and=0; and<or_group.length; and++) {
+							var f = or_group[and];
+							relevance = f.method(fin.dot(f.prop, null, result), f.val);
+							if (relevance === false) {
+								break or_matching
+							}
+							total_relevance += relevance;
+						}
+						// all the ands in an or[] group matched
+						is_match = true;
+					}
+
+					if(is_match === true) {
+						relevance_array.push( {result: result, rel: total_relevance} );
+					}
+				}
+				// secondary relevance sort
+				var rel_sort = function(a, b) {
+					// descending from most relevant
+					return b.rel - a.rel;
+				}
+
+				relevance_array.sort(function(a, b) {
+					var sort_comparison = 0;
+					// call a custom sort method if provided
+					if(typeof sort_method === 'function') {
+						sort_comparison = sort_method(a.result, b.result);
+					}
+					// call secondary relevance based sort
+					if(sort_comparison === 0) {
+						sort_comparison = rel_sort(a, b);
+					}
+					return sort_comparison
+				});
+
+
+				for(var r=0; r<relevance_array.length; r++) {
+					results.push(relevance_array[r].result);
+				}
+
+				return results
+
+			}
+		}
+
+	},
+
 	/*
 	Main navigation function
 
