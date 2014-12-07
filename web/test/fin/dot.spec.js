@@ -41,29 +41,29 @@ describe("fin.dot", function() {
 
 
 	it("should fetch the value at the given location", function() {
-		var day = fin.dot("fin.data.meta.day");
+		var day = fin("fin.data.meta.day").val;
 		expect(day).toBe("Sunday");
 
 	});
 
 	it("should follow foreign keys to a string value", function() {
-		var current_day = fin.dot("fin.data.meta.current_day");
+		var current_day = fin("fin.data.meta.current_day").val;
 		expect(current_day).toBe("Sunday");
 	});
 
 	it("should follow foreign keys recursively", function() {
-		var day_alias = fin.dot("fin.data.meta.day_alias");
+		var day_alias = fin("fin.data.meta.day_alias").val;
 		expect(day_alias).toBe("Sunday");
 	});
 
 	it("should create parents of an accessed child object if they don't already exist", function(){
-		var new_object = fin.dot("fin.data.test.new.key.functionality");
+		var new_object = fin("fin.data.test.new.key.functionality").val;
 		expect(new_object).toEqual({});
 	})
 
 	it("should be able to retrieve the key instead of the value it references", function() {
-		var current_day_key = fin.dot("fin.data.meta.current_day", true);
-		expect(current_day_key).toBe("__fin.data.meta.day");
+		var current_day_key = fin("fin.data.meta.current_day").key;
+		expect(current_day_key).toBe("fin.data.meta.day");
 	})
 
 	it("should be able to do lookups on any arbitrary object", function(){
@@ -74,19 +74,7 @@ describe("fin.dot", function() {
 				}
 			}
 		};
-		var lookup = fin.dot("any.dot.path", null, obj);
-		expect(lookup).toBe("works");
-	})
-
-	it("should allow shorthand syntax when specifying an arbitrary object", function(){
-		var obj = {
-			any: {
-				dot: {
-					path: "works"
-				}
-			}
-		};
-		var lookup = fin.dot("any.dot.path", obj);
+		var lookup = fin("any.dot.path", obj).val;
 		expect(lookup).toBe("works");
 	})
 
@@ -101,7 +89,7 @@ describe("fin.dot", function() {
 				path: "__test_obj.path.here"
 			}
 		};
-		var lookup_fk = fin.dot("fks.path", null, obj);
+		var lookup_fk = fin("fks.path", obj).val;
 		expect(lookup_fk).toBe("Monday");
 	})
 
@@ -115,7 +103,7 @@ describe("fin.dot", function() {
 		};
 		expect(obj.any.dot.path).toBe("works")
 		
-		fin.dot("any.dot.path", false, obj); // delete key/value
+		fin("any.dot.path", obj).remove(); // delete key/value
 		
 		expect(obj.any.dot.path).toBeUndefined() 
 	})
@@ -139,7 +127,7 @@ describe("fin.dot", function() {
 		expect(week.meta.today).toBe("__week.days.mon");
 		expect(week.days.mon).toBe("Monday");
 		
-		fin.dot("alias.current_day", false, obj); // delete window.week.days.mon via two foreign key hops
+		fin("alias.current_day", obj).remove(); // delete window.week.days.mon via two foreign key hops
 
 		expect(obj.alias.current_day).toBe("");	// foreign key should be changed to empty string ie: unlinked
 		expect(week.meta.today).toBe(""); // foreign key on 2nd hop should be changed to empty string ie: unlinked
@@ -149,7 +137,7 @@ describe("fin.dot", function() {
 	it("should set the value of a given key", function(){
 		expect(fin.data.setobj).toBeUndefined();
 
-		fin.dot("fin.data.setobj", null, null, "test");
+		fin("fin.data.setobj").set("test");
 
 		expect(fin.data.setobj).toBe("test");
 	}) 
@@ -160,12 +148,12 @@ describe("fin.dot", function() {
 				path: "here"
 			}
 		}
-		fin.dot("any.path", null, obj, "test");
+		fin("any.path", obj).set("test");
 		expect(obj.any.path).toBe("test")
 	})
 
 	it("should create a path if it doesn't already exist and set the value of the key created", function(){
-		fin.dot("brand_new.obj.path", null, null, "toast");
+		fin("brand_new.obj.path").set("toast");
 		expect(brand_new.obj.path).toBe("toast")
 	})
 
@@ -185,7 +173,7 @@ describe("fin.dot", function() {
 		}
 		expect(tmp_obj.any.path).toBe("peanut butter")
 
-		fin.dot("any.fks.fk", null, obj, "jam")
+		fin("any.fks.fk", obj).set("jam")
 		
 		expect(obj.any.fks.fk).toBe("__tmp_obj.any.path") // foreign key should be unchanged
 		expect(tmp_obj.any.path).toBe("jam")
@@ -199,7 +187,7 @@ describe("fin.dot", function() {
 				}
 			}
 		}
-		var current_user_username = fin.dot("any.dot.path", null, obj)
+		var current_user_username = fin("any.dot.path", obj).val
 		expect(current_user_username).toBe("Bob Sagget")
 	})
 

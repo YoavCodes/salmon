@@ -104,34 +104,34 @@ describe("fin.dot", function() {
 	});
 
 	it("should fetch all the objects", function() {
-		var x = fin.get('fin.data.posts').sort()
+		var x = fin('fin.data.posts').sort()
 		expect(x.length).toBe(3);
 	});
 
 	/* filters */
 	it("should filter for strict equality", function() {
-		var x = fin.get('fin.data.posts').where('title').is('post 2').sort()
+		var x = fin('fin.data.posts').where('title').is('post 2').sort()
 		expect(x.length).toBe(1);
 		expect(x[0].title).toBe("post 2");
 	});
 
 	it("should filter for truthy values", function() {
 		// truthy
-		var x = fin.get('fin.data.posts').where('truthy_test').truthyFalsey(true).sort()
+		var x = fin('fin.data.posts').where('truthy_test').truthyFalsey(true).sort()
 		expect(x.length).toBe(1);
 		expect(x[0].title).toBe("post 2");
 		// falsey
-		var y = fin.get('fin.data.posts').where('truthy_test').truthyFalsey(false).sort()
+		var y = fin('fin.data.posts').where('truthy_test').truthyFalsey(false).sort()
 		expect(y.length).toBe(1);
 		expect(y[0].title).toBe("post 3");
 	});
 
 	it("should filter a string for string or regexp matches", function() {
-		var x = fin.get('fin.data.posts').where('content').contains('ipsum').sort()
+		var x = fin('fin.data.posts').where('content').contains('ipsum').sort()
 		expect(x.length).toBe(3);
 		expect(x[0].title).toBe("post 2"); // post two has 2 ipsum occurances, should be first
 
-		var y = fin.get('fin.data.posts').where('content').contains(/ipsum/g).sort()
+		var y = fin('fin.data.posts').where('content').contains(/ipsum/g).sort()
 		expect(y.length).toBe(3);
 		expect(y[0].title).toBe("post 2"); // post two has 2 ipsum occurances, should be first
 	});
@@ -145,36 +145,36 @@ describe("fin.dot", function() {
 			}
 		}
 
-		var x = fin.get('fin.data.posts').where('title').compare('post 2', custom_filter_function).sort()
+		var x = fin('fin.data.posts').where('title').compare('post 2', custom_filter_function).sort()
 		expect(x.length).toBe(1);
 		expect(x[0].title).toBe("post 2");
 	});
 
 	/* misc */
 	it("should fetch all the objects from a passed in object", function() {
-		var x = fin.get('posts', fin.data).sort()
+		var x = fin('posts', fin.data).sort()
 		expect(x.length).toBe(3);
 	});
 
 	it("should support dot notation referencing/key lookups", function() {
-		var x = fin.get('fin.data.posts').where('author.name').is('Yoav').sort()
+		var x = fin('fin.data.posts').where('author.name').is('Yoav').sort()
 		expect(x.length).toBe(2);
 	});
 
 	/* and/or */
 	it("should support multiple and filters", function() {
-		var x = fin.get('fin.data.posts').where('author.name').is('Yoav').and('content').contains('three').sort()
+		var x = fin('fin.data.posts').where('author.name').is('Yoav').and('content').contains('three').sort()
 		expect(x.length).toBe(1);
 		expect(x[0].title).toBe("post 3");
 	});
 
 	it("should support multiple or filters", function() {
-		var x = fin.get('fin.data.posts').where('author.name').is('Yoav').or('content').contains('two').sort()
+		var x = fin('fin.data.posts').where('author.name').is('Yoav').or('content').contains('two').sort()
 		expect(x.length).toBe(3);		
 	});
 
 	it("should support multiple and/or filters", function() {
-		var x = fin.get('fin.data.posts').where('author.name').is('Yoav').and('content').contains('three').or('content').contains('two').sort()
+		var x = fin('fin.data.posts').where('author.name').is('Yoav').and('content').contains('three').or('content').contains('two').sort()
 		expect(x.length).toBe(2);
 		expect(x[0].title).toBe("post 3");
 		expect(x[1].title).toBe("post 2");
@@ -182,7 +182,7 @@ describe("fin.dot", function() {
 
 	/* sort */
 	it("should sort matches based on relevance", function() {
-		var x = fin.get('fin.data.posts').where('content').contains('ipsum').sort();
+		var x = fin('fin.data.posts').where('content').contains('ipsum').sort();
 		expect(x.length).toBe(3);
 		expect(x[0].title).toBe("post 2");
 		expect(x[1].title).toBe("post 3"); 
@@ -192,7 +192,7 @@ describe("fin.dot", function() {
 		var custom_sort = function(a, b) {
 			return a.custom_sort - b.custom_sort
 		}
-		var x = fin.get('fin.data.posts').where('content').contains('relevant').sort(custom_sort);
+		var x = fin('fin.data.posts').where('content').contains('relevant').sort(custom_sort);
 		expect(x.length).toBe(3);
 		expect(x[0].title).toBe("post 3");
 		expect(x[1].title).toBe("post 2"); 
@@ -201,7 +201,7 @@ describe("fin.dot", function() {
 		var another_custom_sort = function(a, b) {
 			return b.custom_sort - a.custom_sort
 		}
-		var x = fin.get('fin.data.posts').where('content').contains('relevant').sort(another_custom_sort);
+		var x = fin('fin.data.posts').where('content').contains('relevant').sort(another_custom_sort);
 		expect(x.length).toBe(3);
 		expect(x[0].title).toBe("post 1");
 		expect(x[1].title).toBe("post 3"); 
