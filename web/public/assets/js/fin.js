@@ -266,41 +266,44 @@ var fin = function fin(obj_path, object){
 			findings.val = path[0];
 
 			for(var i=1; i < path.length; i++) {
-				if(typeof findings.val[path[i]] === 'undefined') {
+				var path_i = path[i];
+				var findings_val_path_i = findings.val[path_i];
+				var next_i = i+1;
+				if(typeof findings_val_path_i === 'undefined') {
 					// create a blank node if the key doesn't exist.. if we're trying to access it, it means we want it to exist
 					// this is a convenient way to create a new property and ensure all the parents exist				
-					findings.val[path[i]] = {};
+					findings.val[path_i] = {};
 
-				} else if (findings.val[path[i]] === null) {				
+				} else if (findings_val_path_i === null) {				
 					return null
 				}				
 				// check if it's a dot.key
-				if(typeof findings.val[path[i]] === 'string' && findings.val[path[i]].substr(0, 2) === "__") {
-					var dot_string = findings.val[path[i]].substr(2, findings.val[path[i]].length - 2);	
+				if(typeof findings_val_path_i === 'string' && findings_val_path_i.substr(0, 2) === "__") {
+					var dot_string = findings_val_path_i.substring(2);	
 					// if findings.val is a dot string save it in findings.key
 					// note: since we only return the original findings, this will only represent the first dot.string at the obj_path value					
 					findings.key = dot_string;	
 					
 					// we're deleting the property and this is a dot.path
 									
-					if((i+1) == path.length && remove === true) {												
+					if(next_i == path.length && remove === true) {												
 						if(follow_dotkeys !== false) {
 							// default: follow dot.paths changing them to empty strings	
 							dot(dot_string, null, {}, remove); 
-							findings.val[path[i]] = ""
+							findings.val[path_i] = ""
 							return
 						} else {
 							// we're not following dotkeys, just delete the property/value that stored the dotkey
 							// note: if you wanted to set the dotkey to an empty string use fin().set('', false) instead of remove()
-							delete findings.val[path[i]];
+							delete findings.val[path_i];
 						}
-					} else if((i+1) == path.length && new_value !== undefined) {
+					} else if(next_i == path.length && new_value !== undefined) {
 						if(follow_dotkeys !== false) {
 							// default behaviour: we're setting a new value at the end of the lookup chain
 							dot(dot_string, null, {}, false, new_value);
 						} else {
 							// we're not following the dotkey, we're setting it to a new value
-							findings.val[path[i]] = new_value
+							findings.val[path_i] = new_value
 							return
 						}
 					} else {
@@ -311,14 +314,14 @@ var fin = function fin(obj_path, object){
 
 				} else {	
 					// if we're deleting a property and this is the property
-					if ((i+1) == path.length && remove === true) {
-						delete findings.val[path[i]]
+					if (next_i == path.length && remove === true) {
+						delete findings.val[path_i]
 						return
 					}
-					if((i+1) == path.length && new_value !== undefined) {
-						findings.val[path[i]] = new_value
+					if(next_i == path.length && new_value !== undefined) {
+						findings.val[path_i] = new_value
 					}
-					findings.val = findings.val[path[i]];
+					findings.val = findings.val[path_i];
 				}
 			}
 
