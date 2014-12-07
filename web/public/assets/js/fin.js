@@ -132,8 +132,7 @@ fin = {
 	_meta: { // used by highfin.js for storing generic/state data
 		templates: {
 
-		},
-		assigned_events: [],
+		},		
 		// path
 		hostname: window.location.hostname.toString(),
 		protocol: window.location.protocol.toString(),		
@@ -1242,10 +1241,7 @@ fin = {
 		} else {
 			template_location = "root/templates/" + selector.replace(/_/g, "/") + "." + type
 		}
-		var num_lines_remove = 1;
-		if(type === 'html' || typeof template_string === 'undefined') {
-			num_lines_remove = 2
-		}
+		
 		
 		// parse & rejigger template into javascript
 		tmpl = tmpl.replace(/``|([`])(?:(?=(\\?))\2.)[\s\S]*?\1/g, function(_string, _first_match) {				
@@ -1279,9 +1275,12 @@ fin = {
 		// template stack traceability
 		// adding a try/catch block that prints a stack trace, uses a regex to get the line/char number of the template file, modifies it to reflect the code and the prints out a pretty error in the console
 		tmpl = "try {" + tmpl + "} catch(err) {"+					
-				"var line = err.stack.match(/>(:[0-9]+:[0-9]+)/)[0].replace('>', ''); "+
+				"var line = err.stack.match(/>(:[0-9]+:[0-9]+)/)[0].replace('>', '');"+
 				"var line_array = line.split(':'); "+
-				"line = (parseInt(line_array[1], 10) -"+num_lines_remove+") + ' char ' + line_array[2]; "+ 					
+				"var c = parseInt(line_array[2], 10);" +
+				"var sub = this."+selector+".toString().substr(0, c+51);" +
+				"var lines = sub.toString().split('\\\\n');" +
+				"line = lines.length + ' char ' + lines[lines.length-1].length; "+ 					
 				"fin.log.error(err.message, '"+template_location+"', line);}"; 
 
 		template = new Function(['__events', 'data', 'rootNode'],tmpl)
