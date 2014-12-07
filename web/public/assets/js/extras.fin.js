@@ -8,13 +8,13 @@
  * 
  * Updated: 15-11-2014
  */
-;(function($, Fin) {
+;(function($, fin) {
 
-if(typeof Fin.prototype.plugins === 'undefined') {
-	Fin.prototype.plugins = {};
+if(typeof fin.prototype.plugins === 'undefined') {
+	fin.prototype.plugins = {};
 }
 
-$.extend(true, Fin.prototype.plugins, {
+$.extend(true, fin.prototype.plugins, {
 	/*
 		// date & local timezone helper
 		// TODO replace jquery-dateFormat with xDate
@@ -329,5 +329,6 @@ $.extend(true, Fin.prototype.plugins, {
 	}*/
 })
 
-})(jQuery, Fin);
+// note: we're passing in the fin.init constructor here. the rest of the fin object shouldn't exist yet.
+})(jQuery, fin.init);
 

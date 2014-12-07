@@ -12,7 +12,7 @@
  */
 ;(function($, window) {
 
-window.Fin = function HighFin(config) {
+function init(config) {
 
 /* 
 use log() instead of console.log() to prevent client side errors in some browsers that lack a console.
@@ -57,9 +57,8 @@ $.ajaxSetup({
 // fin object
 //===========================/
 /****************************/
-window.fin = {};
 
-fin = {
+window.fin = {
 	// settings and defaults
 	settings: $.extend(true, {}, {		
 		// nav
@@ -1321,8 +1320,11 @@ fin = {
 
     		log.apply(this, args);
     	}
-    }
+    },
+    init: init // store the bootstrap function for edge cases where we need to re-init the fin object. eg: unit tests
 }
+
+
 
 
 /****************************/
@@ -1430,7 +1432,8 @@ Function.prototype.curry = function curry(named_args) {
 fin._meta.pathname = window.location.pathname.toString().replace(/(^\/)|(\/$)/, ""); // regex: remove end slashes
 
 // load plugins
-$.extend(true, fin.util, Fin.prototype.plugins);
+fin.pg = {};
+$.extend(true, fin.pg, init.prototype.plugins); // init.prototype is preserved even after multiple init() calls.
 
 $(document).ready(function(){
 	// the starter ajax response iframe
@@ -1453,6 +1456,9 @@ $(document).ready(function(){
 
 });
 
+}
+window.fin = {
+	init: init // set fin to the bootstrap function
 }
 
 })(jQuery, window);

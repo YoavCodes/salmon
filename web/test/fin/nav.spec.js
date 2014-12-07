@@ -24,7 +24,7 @@ describe("fin.nav", function(){
 
 
 
-		Fin({
+		fin.init({
 			containers: ['container', 'nestedcontainer'],
 			navigate: {
 				home: {
@@ -94,8 +94,6 @@ describe("fin.nav", function(){
 
 
 	afterEach(function(){
-		fin = {};
-
 		$('#container, .cleanup').remove();
 	});
 

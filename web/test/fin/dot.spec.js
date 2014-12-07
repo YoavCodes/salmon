@@ -1,7 +1,7 @@
 describe("fin.dot", function() {
 
 	beforeEach(function(){
-		Fin();	
+		fin.init();	
 
 		fin.data = {
 			users: [
@@ -36,9 +36,7 @@ describe("fin.dot", function() {
 		}	
 	});
 
-	afterEach(function(){
-		fin = {};
-	});
+
 	
 
 

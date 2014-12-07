@@ -1,7 +1,7 @@
 describe("fin.dot", function() {
 
 	beforeEach(function(){
-		Fin();	
+		fin.init();	
 		fin.data = {
 		    users: {
 		        1: {

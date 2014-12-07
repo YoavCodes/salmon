@@ -12,13 +12,8 @@ describe("Function.prototype.curry", function() {
 	}
 
 	beforeEach(function(){
-		Fin();		
-	});
-
-	afterEach(function(){
-		fin = {};
-	});
-		
+		fin.init();		
+	});	
 	
 
 	it("should allow using named arguments with a function", function() {
