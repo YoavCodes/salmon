@@ -1,30 +1,13 @@
-/* fin.js v1.0.0
- * Copyright 2012-2013, Yoav Givati ( hello@yoavgivati.com )
+/* fin.js v0.9.0
+ * Copyright 2012-2014, Yoav Givati ( hello@yoavgivati.com )
  * http://highf.in ~ http://chalkhq.com
  *
  * Released under the MIT license
- * http://highf.in/license
+ * http://highf.in/salmon/#!/license
  *
  * 
- * Updated: 15-11-2014
+ * Updated: 12-2014
  * Requires jQuery
-
-//simple bench test
-var start = new Date().getTime();
-for(var i=0; i<50000; i++) {
-	// do a
-}
-
-var end = new Date().getTime()-start;
-console.log(end);
-
-var start = new Date().getTime();
-for(var i=0; i<50000; i++) {
-	// do b
-}
-
-var end = new Date().getTime()-start;
-console.log(end);
 
  */
 ;(function($, window) {
