@@ -347,11 +347,12 @@ fin = {
 				}
 				return this
 			},
-			// truthy 
-			isTruthy: function(value) {
+			// truthy or falsey
+			// @value: boolean. ranks matching boolean higher than matching truthy/falsey
+			truthyFalsey: function(value) {
 				var f = this.filters[this.current_filter.or][this.current_filter.and];
 				f.val = value;
-				f.method = function(prop, val) {
+				f.method = function(prop, val) {					
 					if(prop === val) {
 						// exact match
 						return 2
@@ -376,7 +377,7 @@ fin = {
 						var val = new RegExp(val, 'g');
 					}
 					matches = prop.match(val);					
-					if(matches.length > 0) {
+					if(matches !== null && matches.length > 0) {
 						return matches.length
 					} else {
 						return false
@@ -392,7 +393,7 @@ fin = {
 
 			compare: function(value, fn) {
 				var f = this.filters[this.current_filter.or][this.current_filter.and];
-				f.val = val;
+				f.val = value;
 				f.method = fn;
 				return this
 			},
@@ -415,7 +416,7 @@ fin = {
 							var f = or_group[and];
 							relevance = f.method(fin.dot(f.prop, null, result), f.val);
 							if (relevance === false) {
-								break or_matching
+								continue or_matching
 							}
 							total_relevance += relevance;
 						}
