@@ -16,5 +16,5 @@ we're concurrently developing the guppy tool, which uses the -.json (dashConfig)
 
 visit http://highf.in/guppy for more info
 
-or see the frybox repo which gives you a Vagrant basebox with the latest guppy already installed and configured http://github.com/YoavGivati/frybox
+or see the frybox repo which gives you a Vagrant basebox with the latest guppy already installed and configured http://github.com/YoavGivati/fry-box
 
