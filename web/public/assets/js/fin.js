@@ -376,6 +376,146 @@ fin.settings = $.extend(true, {}, {
 	
 }, config);
 
+// perform recursive object extending
+// properties that are objects are recursed
+// properties that are arrays can either be replace or DRYly appended to. if obj === true, then it'll append arrays.
+// properties that are other types will always be replaced, the child is always more correct than the parent.
+// for arrays of objects, we can't logically assume to recurse through those objects. extend them manually first.
+// @obj... pass in any number of objects. the first object will be extended with the second, then with the third, and so on
+// by default, properties that exist in the first object will be overwritten if they exist in the second
+// @obj pass in true as the first parameter to change the default behaviour so that existing properties are extended, not overwritten
+fin.extend = function(obj) {
+	// [].constructor === Array	
+	if(typeof obj === 'undefined') {
+		return {};
+	}
+
+	var args = Array.prototype.slice.call(arguments, 1);
+	var extend = false; // by default existing properties are overwritten
+	if(obj === true) {
+		extend = true;		
+	}
+	if(typeof obj === 'boolean') {
+		obj = arguments[1];
+		args.shift();
+	}
+	for(var a=0; a<args.length; a++) {
+		var extending_obj = args[a];		
+
+		// is obj an object or array
+		if(extending_obj.constructor === Object && obj.constructor === Object) {
+
+			for(var prop in extending_obj) {
+				// if the property doesn't exist in obj, then just add it
+				if(typeof obj[prop] === 'undefined') {
+					obj[prop] = extending_obj[prop];
+					continue;
+				}
+				// otherwise if there's a conflict
+				// if the property's value is an object or array, then recurse
+				if(extending_obj[prop].constructor === Object || extending_obj[prop].constructor === Array) {					
+					fin.extend(extend, obj[prop], extending_obj[prop]);
+				} else {
+					if(extend === false) {
+						// overwrite 
+						obj[prop] = extending_obj[prop];
+					} 
+				}
+			}
+
+		} else if (extending_obj.constructor === Array && obj.constructor === Array) {
+			if(extend === false) {
+				// overwrite array
+				obj = extended_obj;
+			} else {
+				// DRY extend array
+				for(var b=0; b<extending_obj.length; b++) {
+					if(obj.indexOf( extending_obj[b] )) {
+						obj.push( extending_obj[b] );
+					}
+				}
+			}
+		} else {			
+			// mismatch. trying to extend an array with an object, visa versa, or some other types passed in.
+			// child is always more correct than parent if types disagree
+			obj = extending_obj;
+
+		}
+	} 
+
+	return obj;
+
+}
+
+// transform passed in navigate objection from hierarchical DRY to flat explicit structure
+/*
+	navigate: { // a list of 'pages' defined as functions to run and container->templates to render
+        // landing
+        'blog': {
+            require: ['misc'],
+            before_func: [['fin.fn.misc.setCurrentApp', {app: 'blog'}]],
+            maincontent: ['_sidebar']
+            footer: ['_blog_footer'],
+        },
+        'singlepost': {
+            parents: ['blog'],
+            require: ['blog_comments', 'blog_tags'],  
+            before_func: [['fin.fn.misc.otherfunction', {thing: 'one'}]], 
+            maincontent: ['blog_singlepost'],
+        }
+    }
+
+    will be transformed to: 
+
+    navigate: {
+		'blog': {
+		    require: ['misc'],
+		    before_func: [['fin.fn.misc.setCurrentApp', {app: 'blog'}]],
+		    footer: ['_blog_footer'],
+		},
+		'singlepost': {
+            require: ['misc', blog_comments', 'blog_tags'],  
+            before_func: [['fin.fn.misc.setCurrentApp', {app: 'blog'}], ['fin.fn.misc.otherfunction', {thing: 'one'}]], 
+            maincontent: ['_sidebar', blog_singlepost'],
+            footer: ['_blog_footer'],
+        }
+    }
+*/
+fin.transformNavigationObj = function() {
+	var navigate = fin.settings.navigate;
+	var flat_navigate = {};
+	var reserved_words = ['parents', 'before_func', 'after_func']; // note: require: [] templates should be loaded here
+
+	for(var page in navigate) {				
+		// a parent must be defined before a child, so it must already exist in flat_navigate
+		var parents = navigate[page].parents;
+		delete navigate[page].parents;
+
+		if(typeof parents !== 'undefined') {
+			// true implies a deep_copy, so arrays and objects are extended not overwritten
+			// ie: if you do something in a parent, it will also happen in the child. before whatever the child does
+			var extend_array = [true, {}];					
+			flat_navigate[page] = {};
+
+			for(var i=0; i < parents.length; i++) {
+				// add already processed parents from flat navigate
+				extend_array.push(flat_navigate[ parents[i] ]);
+				//$.extend(true, flat_navigate[page], flat_navigate[ parents[i] ]);
+			}
+			// add this page
+			extend_array.push( navigate[page] );
+			//$.extend(true, flat_navigate[page], navigate[page]);
+			flat_navigate[page] = fin.extend.apply(this, extend_array);
+		} else {
+			flat_navigate[page] = navigate[page];
+		}
+	}
+	fin.settings.navigate = flat_navigate;
+
+}
+
+fin.transformNavigationObj();
+
 fin.data = { // for storing app data fin.data.news.some_stored_data
 
 };
@@ -466,10 +606,39 @@ Main navigation function
 fin.nav = function(key, containers) {
 	if(fin.settings.disable_nav.length > 0) {
 		//_.alert(data.meta.disable_nav, [["ok", ""]])
-		log('hashbang navigation disabled')
+		log('hashbang navigation disabled');
+		return
+	}	
+	var nav_obj = fin.settings.navigate[key];
+	if(typeof nav_obj === 'undefined') {			
+		log(key + ": The page you were navigating to has not been implemented yet.");
 		return
 	}
+	var reserved_keywords = ['before_func', 'after_func'];
+	var missing_templates = [];
+	// if we don't have all the required templates, then fetch them
+	for(var container in nav_obj) {
+		if(reserved_keywords.indexOf(container) >= 0) {
+			continue;
+		}
+		for(var i=0; i<nav_obj[container].length; i++) {
+			var t_name = nav_obj[container][i];
+			// if it's missing, and we don't already know it's missing, add it to the missing list
+			if(typeof fin._meta.templates[ t_name ] === 'undefined' && missing_templates.indexOf( t_name ) === -1) {
+				missing_templates.push( t_name )
+			}
+		}
+	}
+	// if we're missing some templates, get them before navigating, otherwise just navigate
+	if(missing_templates.length > 0) {
+		var params = {
+			template_list: missing_templates.toString()
+		};
 
+		fin.getData(params, _nav);
+	} else {
+		_nav();
+	}
 
 	// todo: add callback here
 
@@ -483,60 +652,66 @@ fin.nav = function(key, containers) {
 	// if(typeof _gaq !== 'undefined') {
 	// 	_gaq.push(['_trackPageview', key_to_path]);
 	// }
-
-	
-
-	//clear field errors
-	$('input').parent().removeAttr('original-title')
-	//$('.tipsy').hide()
-
-
-	if(fin.settings.navigate[key] === undefined) {
-		log(key + ": The page you were navigating to has not been implemented yet.")
-		return;
-	}
-
-
-	// run before functions
-	if(fin.settings.navigate[key]['before_func'] !== undefined) {
-		for (var i = 0; i < fin.settings.navigate[key]['before_func'].length; i++) {
-			var before_func_obj = fin.settings.navigate[key]['before_func'][i]
-			before_func_obj[0].curry(before_func_obj[1])()
+	function run_funcs(fns) {
+		if(typeof fns !== 'undefined') {
+			for (var i = 0; i < fns.length; i++) {
+				var fn = fns[i][0];
+				var args = fns[i][1];
+				// if it's a string, do a dot.key lookup
+				if(typeof fn === 'string') {
+					fn = fin(fn).val;
+				}
+				// if it's now a function, try curry it with named args and call it
+				if(typeof fn === 'function') {
+					fn.curry( args )()	
+				}
+				
+			}
 		}
 	}
 
-	var scrollToTop = false
+	function _nav() {
 
-	
+		//clear field errors
+		$('input').parent().removeAttr('original-title')
+		//$('.tipsy').hide()
 
-	for (var c = 0; c < fin.settings.containers.length; c++) {
-		if(fin.settings.navigate[key][fin.settings.containers[c]] !== undefined) {
+
+		// run before functions
+		run_funcs( nav_obj['before_func'] );
+		
+
+		var scrollToTop = false
+
+		reserved_keywords.push('require');
+
+		for(var container in nav_obj) {		
+			if(reserved_keywords.indexOf(container) >= 0) {
+				continue;
+			}
+
 
 			// mark rendered templates to be cleared
-			$('#' + fin.settings.containers[c] + ' > div' ).addClass('toclear');
+			$('#' + container + ' > div' ).addClass('toclear');
 
 
 			
 
-			for (var i = 0; i < fin.settings.navigate[key][fin.settings.containers[c]].length; i++) {
-				var template_name = fin.settings.navigate[key][fin.settings.containers[c]][i]
-				//log(key)
-				if(fin.settings.navigate[key][fin.settings.containers[c]][i].substring(0, 1) === "_") {
-					var template_name = fin.settings.navigate[key][fin.settings.containers[c]][i].substring(1, fin.settings.navigate[key][fin.settings.containers[c]][i].length)
+			for (var i = 0; i < nav_obj[container].length; i++) {
+				var template_name = nav_obj[container][i]
+				if(nav_obj[container][i].substring(0, 1) === "_") {
+					var template_name = nav_obj[container][i].substring(1, nav_obj[container][i].length)
 				}
 				if (i === 0) {
 					//$('#' + containers[c] + ' > div').addClass('toclear')
 				}
 				
 				var render = true;
-				//log(fin.settings.navigate[key][fin.settings.containers[c]][i])
 				// if templatename is preceded with an underscore, check if it's already rendered
-				if(fin.settings.navigate[key][fin.settings.containers[c]][i].substring(0, 1) === "_") {
+				if(nav_obj[container][i].substring(0, 1) === "_") {
 					// remove underscore
-					//log("don't re-render")
 					// check if already rendered
 					if($('.block_' + template_name).length > 0) {
-						//log("not re-rendering")
 						// remove from clear list
 						$('.block_' + template_name).removeClass('toclear')
 						render = false;
@@ -545,42 +720,34 @@ fin.nav = function(key, containers) {
 				}
 				if(render === true) {
 					if(typeof fin._meta.templates[template_name] !== 'undefined') {
-						fin.render('#' + fin.settings.containers[c], template_name, false)
+						fin.render('#' + container, template_name, false)
 					} else {
 						// note error will already be logged
-						fin.log.solution('Template "' + template_name + '" did not compile. See client or server console output for solution.');//fin.settings.navigate[key][fin.settings.containers[c]][template_name])
+						fin.log.solution('Template "' + template_name + '" did not compile. See client or server console output for solution.');//nav_obj[fin.settings.containers[c]][template_name])
 					}
 				}
 				
-			}
-
-			
-		} 
-	}
-
-	// keep track of the last nav function run
-	fin._meta.last_nav(key);
-
-	if(scrollToTop === true) {
-		$('body').scrollTop(0)
-	}
-
-	// run after functions
-	if(fin.settings.navigate[key]['after_func'] !== undefined) {
-		for (var i = 0; i < fin.settings.navigate[key]['after_func'].length; i++) {
-			var after_func_obj = fin.settings.navigate[key]['after_func'][i]
-			after_func_obj[0].curry(after_func_obj[1])()
+			}							
 		}
-	}
 
-	
-	// remove templates marked for clear
-	$('.toclear').remove()
+		// keep track of the last nav function run
+		fin._meta.last_nav(key);
 
-	if(typeof fin.settings.callbacks.afterNavCallback !== 'undefined') {
-		fin.settings.callbacks.afterNavCallback()
+		if(scrollToTop === true) {
+			$('body').scrollTop(0)
+		}
+
+		run_funcs( nav_obj['after_func'] );
+
+		
+		// remove templates marked for clear
+		$('.toclear').remove()
+
+		if(typeof fin.settings.callbacks.afterNavCallback !== 'undefined') {
+			fin.settings.callbacks.afterNavCallback()
+		}
+		
 	}
-	
 
 
 };
@@ -621,7 +788,6 @@ fin.onbeforeunload = function (e) {
 };
 
 fin.onHashchange = function(){
-	log('hashchanged')
 	// respond to location change events.
 
 	// make sure uri is encoded for consistency
@@ -651,21 +817,24 @@ fin.onHashchange = function(){
 		
 		if(typeof fin.settings.routes[match_bang] !== 'undefined') {
 			fin.nav(fin.settings.routes[match_bang]);
-			return;
+			return
 		} else {
 			//log('route ' + match_bang + ' not found')
 		}
-		match_bang = match_bang.replace(/\/[^\/]*$/, "")
+		// try a parent path. ie: if #!/news/search/ is not defined, try #!/news/
+		match_bang = match_bang.replace(/\/[^\/]*$/, "");
 	}
 
-	// show default screen unless user just navigated somewhere via url
-	//if(fin._meta.last_nav() === "" && typeof fin.settings.default_page !== 'undefined') {		
+	// there were no matching routes for the current hash, so show default screen
+	if(typeof fin.settings.default_page !== 'undefined') {		
 		fin.nav(fin.settings.default_page)		
-	//}
+	}
 
 
 
 };
+
+
 
 fin.fetchTemplates = function(){
 	var params = {}
@@ -674,9 +843,9 @@ fin.fetchTemplates = function(){
 	if(typeof fin._meta.template_list === 'undefined') {				
 		fin._meta.template_list = [];
 
-		// include nested_templates special container to fetch those templates
+		// include require special container to fetch those templates
 		var containers = $.extend([], fin.settings.containers)
-		containers.push('async_templates')
+		containers.push('require')
 		// for each page in the navigate object
 		for(var page in fin.settings.navigate) {
 			// for each container defined
@@ -750,7 +919,7 @@ fin.getData = function(_params, _callback) {
 			}
 
 		} else if(res.meta.status === 401) {
-			fin.nav('login')
+			//fin.nav('login')
 		}
 	})
 
@@ -1019,7 +1188,6 @@ fin.v = {
 		max = max||Infinity;
 		try {
 			return fin.v.validate(form, name, function(field, name, value){	
-				log(value)
 				if(value.length < min || value.length > max) { 
 					return [false, name+" required length of "+min+"-"+max];
 				}
@@ -1437,7 +1605,7 @@ Function.prototype.curry = function curry(named_args) {
 		arguments = [named_args].concat(unnamed_args);
 	}
 
-	if (typeof fn.prototype.curry_fn !== 'undefined') {
+	if(typeof fn.prototype.curry_fn !== 'undefined') {
 		fn = fn.prototype.curry_fn;
 	}
 	var params = fn.toString().match(/\(([^)]*)\)/)[1].replace(/[ ]*/g, "").split(',');				
@@ -1445,6 +1613,10 @@ Function.prototype.curry = function curry(named_args) {
 	args.unshift(fn);
 	var func = fn.bind.apply(fn, args);
 	
+	if(typeof func.prototype === 'undefined') {
+		func.prototype = {};
+	}
+
 	func.prototype.curry_args = named_args;
 	func.prototype.unnamed_args = unnamed_args;
 	func.prototype.curry_fn = fn;
@@ -1472,10 +1644,8 @@ $(document).ready(function(){
   		fin.cacheTemplate($(this).attr('id').replace(/template_/, ""))
   	})
 
-  	// fetch templates * will also trigger hashchange event
-  	fin.fetchTemplates()
-
-	fin.loading(false)
+  	window.onhashchange();
+	//fin.loading(false)
 
 });
 
