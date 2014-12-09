@@ -6,7 +6,9 @@ Salmon is a fat-client Javascript framework backed by a node.js api server for b
 
 # hello world
 to get started
+
 cd into the ./web/ directory and run $node salmon
+
 then visit 127.0.0.1:8080 in your browser
 
 # guppy
