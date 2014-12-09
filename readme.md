@@ -14,4 +14,7 @@ then visit 127.0.0.1:8080 in your browser
 # guppy
 we're concurrently developing the guppy tool, which uses the -.json (dashConfig) file for dev tasks eg: re-running your app on file change, compiling less, running tests, etc. and deployment tasks, setting up multi-server or single-server CD boxes, pushing changes to those boxes, etc.
 
+visit http://highf.in/guppy for more info
+
+or see the frybox repo which gives you a Vagrant basebox with the latest guppy already installed and configured http://github.com/YoavGivati/frybox
 
