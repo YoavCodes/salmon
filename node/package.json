@@ -7,8 +7,7 @@
   "scripts": {
     "preinstall": ""
   },
-  "dependencies": {
-    "shelljs": "0.2.6",
+  "dependencies": {    
     "formidable": "1.0.14",
     "node-static": "latest",
     "mongodb": "latest"

@@ -1,9 +1,7 @@
 // routes
 exports.router = function(res, req, pathname, segments, command) {
 
-	var http = require("http")
-	require('../salmon/node_modules/shelljs/global');
-
+	var http = require("http")	
 	
 
     // decide what to do
