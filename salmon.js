@@ -12,4 +12,4 @@ require('.libs/your-npm-dependency.js')
 run the salmon app by requiring tail.js
 add your application code/controllers to /app
 */
-require('./salmon/tail.js');
+require('./node/tail.js');

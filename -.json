@@ -6,11 +6,11 @@
 			"version": "0.10.28",
 			"main": "./salmon.js",
 			"watch": ["./"],
-			"exclude": ["./.git","./salmon/.grunt", "./salmon/_SpecRunner.html", "./salmon/node_modules", "./libs/node_modules"],
+			"exclude": ["./.git","./node/.grunt", "./node/_SpecRunner.html", "./node/node_modules", "./libs/node_modules"],
 			"less": [ {"from": "./public/assets/less", "to": "./public/assets/css", "min": false} ],
 			"jasmine": {"frontend": "./test/fin", "backend": "./test/tail"},
 			"cachecontrol": ["./public", "./template"],			
-			"npm": ["./salmon", "./libs"],
+			"npm": ["./node", "./libs"],
 			"endpoints": [{"path":"/0", "port": "8080"}]			
 		}],
 		"static": [{"path": "/", "dir": "./public"}], 
