@@ -361,8 +361,8 @@ fin.settings = $.extend(true, {}, {
 		 4. templates may be nested and also have functions called from within the template itself at various stages during the rendering process
 		
 	*/
-	navigate: {},
 	containers: [],
+	navigate: {},
 	routes: {},
 	callbacks: {
 		afterNavCallback: undefined,
@@ -375,6 +375,35 @@ fin.settings = $.extend(true, {}, {
 	global_form_onError: undefined,
 	
 }, config);
+
+fin.log = {
+	error: function logError(msg, url, line) {
+		var args = [];
+		
+		var args = ["%c Error %c ", "color:hsl(0, 100%, 90%);background-color:hsl(0, 100%, 50%);"]; // red with white text
+
+		if(typeof url !== 'undefined') {
+			if (typeof line !== 'undefined') {
+				args[0] += "on line " + line + " of " + url + " %c ";
+			} else {
+				args[0] += "in " + url + " %c ";
+			}
+			
+			args.push("color:hsl(0, 0%, 80%);background-color:hsl(0, 0%, 0%);") // black with grey text
+		}
+
+		args[0] += msg;
+		args.push("color:hsl(100, 0%, 0%);background-color:hsl(0, 0%, 100%);") // white with black text
+
+		log.apply(this, args);
+	},
+
+	solution: function logSolution(msg) {
+		var args = ["%c Solution %c " + msg, "color:hsl(240, 100%, 90%);background-color:hsl(240, 100%, 50%);", "color:hsl(100, 0%, 0%);background-color:hsl(0, 0%, 100%);"];
+
+		log.apply(this, args);
+	}
+};
 
 // perform recursive object extending
 // properties that are objects are recursed
@@ -499,7 +528,14 @@ fin.transformNavigationObj = function() {
 
 			for(var i=0; i < parents.length; i++) {
 				// add already processed parents from flat navigate
-				extend_array.push(flat_navigate[ parents[i] ]);
+				if(typeof flat_navigate[parents[i] ] === 'undefined') {
+					// parent was either not defined in the correct order, or at all
+					fin.log.error('The page "'+page+'" depends on parent page "'+parents[i]+'"')
+					fin.log.solution('Ensure '+parents[i]+' is defined in the navigate{} object before '+page)
+					// note: we let everything continue after alerting dev
+				} else {
+					extend_array.push(flat_navigate[ parents[i] ]);
+				}
 				//$.extend(true, flat_navigate[page], flat_navigate[ parents[i] ]);
 			}
 			// add this page
@@ -559,11 +595,18 @@ fin._meta = {
 		} 
 		return fin._meta.last_nav_array[fin._meta.last_nav_array.length - 1] || ""
 	},
+	// for use in before_func and after_func functions. last_nav('page') is set at the beginning of a nav.
+	// current_nav() will return an array of the from page and to page
+	current_nav: function() {
+		var from = fin._meta.last_nav_array[fin._meta.last_nav_array.length - 2] || "";
+		var to = fin._meta.last_nav_array[fin._meta.last_nav_array.length - 1] || "";
+		return [from, to];
+	},
 	// simulate a back button
 	go_back: function() {
 		fin._meta.last_nav_array.pop()
 		if(fin._meta.last_nav() !== "") {
-			nav(fin._meta.last_nav())
+			fin.nav(fin._meta.last_nav())
 		} else {
 			welcome()
 		}
@@ -614,9 +657,13 @@ fin.nav = function(key, containers) {
 		log(key + ": The page you were navigating to has not been implemented yet.");
 		return
 	}
+	// keep track of the last nav function run
+	fin._meta.last_nav(key);
+
 	var reserved_keywords = ['before_func', 'after_func'];
 	var missing_templates = [];
-	var containers = fin.settings.containers;
+	var containers = $.extend([], fin.settings.containers);
+	containers.unshift("require")
 	// if we don't have all the required templates, then fetch them
 	for(var c=0; c<containers.length; c++) {		
 		var container = containers[c]
@@ -631,12 +678,13 @@ fin.nav = function(key, containers) {
 			}
 		}
 	}
+	// we need a docFrag copy of body to work with later.
+	var docFrag = $('body').clone(true, true);
 	// if we're missing some templates, get them before navigating, otherwise just navigate
 	if(missing_templates.length > 0) {
 		var params = {
 			template_list: missing_templates.toString()
-		};
-
+		};		
 		fin.getData(params, _nav);
 	} else {
 		_nav();
@@ -691,44 +739,51 @@ fin.nav = function(key, containers) {
 
 		reserved_keywords.push('require');
 		var r = 0;
+		containers = $.extend([], fin.settings.containers)
 		
 		var _render = function (container) {	
-
 			var container = containers[r]
 			if(reserved_keywords.indexOf(container) >= 0 || typeof nav_obj[container] === 'undefined') {
 				r++;
 				if (r < containers.length) {
 					_render(containers[r])
+				} else {
+					_afterrender()
 				}
 				return
-			}
+			}			
 			// mark rendered templates to be cleared
-			$('#' + container + ' > div' ).addClass('toclear');
+			$(docFrag).find('#' + container + ' > div' ).addClass('toclear');
+			$container = $(docFrag).find("#"+container);
 
 			for (var i = 0; i < nav_obj[container].length; i++) {
 				var template_name = nav_obj[container][i]
+				var rerender = true;
 				if(nav_obj[container][i].substring(0, 1) === "_") {
+					rerender = false;
 					var template_name = nav_obj[container][i].substring(1, nav_obj[container][i].length)
 				}
-				if (i === 0) {
-					//$('#' + containers[c] + ' > div').addClass('toclear')
-				}
+				
 				
 				var render = true;
 				// if templatename is preceded with an underscore, check if it's already rendered
-				if(nav_obj[container][i].substring(0, 1) === "_") {
+				if(rerender === false) {
 					// remove underscore
+					var $rendered_template = $(docFrag).find('.block_' + template_name);
 					// check if already rendered
-					if($('.block_' + template_name).length > 0) {
+					if($rendered_template.length > 0) {
 						// remove from clear list
-						$('.block_' + template_name).removeClass('toclear')
+						$rendered_template.removeClass('toclear');
+						// move it to it's new position in container
+						$container.append($rendered_template)
 						render = false;
 					}
 					
 				}
 				if(render === true) {
 					if(typeof fin._meta.templates[template_name] !== 'undefined') {
-						fin.render('#' + container, template_name, false)
+						//fin.render('#' + container, template_name, false)
+						$container.append(fin.r(template_name))
 					} else {
 						// note error will already be logged
 						fin.log.solution('Template "' + template_name + '" did not compile. See client or server console output for solution.');//nav_obj[fin.settings.containers[c]][template_name])
@@ -737,32 +792,44 @@ fin.nav = function(key, containers) {
 				
 			}	
 
+
 			r++;
 			if (r < containers.length) {
 				// note: next template may require dom elements from this template to finish rendering
 				// ensure next render execution frame is moved to the end of the execution stack
-				setTimeout(function(){ _render(containers[r]) },0);		
+				//setTimeout(function(){ 
+					_render(containers[r]) 
+					//},0);		
+
+			} else {
+				_afterrender()
 			}
 
 		}
 
 		_render((containers[r]));		
 
-		// keep track of the last nav function run
-		fin._meta.last_nav(key);
+		function _afterrender() {
+			$('body').replaceWith(docFrag);
+			
 
-		if(scrollToTop === true) {
-			$('body').scrollTop(0)
-		}
+			if(scrollToTop === true) {
+				$('body').scrollTop(0)
+			}
 
-		run_funcs( nav_obj['after_func'] );
+			
+			
+			run_funcs( nav_obj['after_func'] ) 
+			
+			
 
-		
-		// remove templates marked for clear
-		$('.toclear').remove()
+			
+			// remove templates marked for clear
+			$('.toclear').remove()
 
-		if(typeof fin.settings.callbacks.afterNavCallback !== 'undefined') {
-			fin.settings.callbacks.afterNavCallback()
+			if(typeof fin.settings.callbacks.afterNavCallback !== 'undefined') {
+				fin.settings.callbacks.afterNavCallback()
+			}
 		}
 		
 	}
@@ -1369,7 +1436,8 @@ fin.cacheTemplate = function(selector, template_string) {
 	// template caching
     if (!fin._meta.templates){ fin._meta.templates = {}; }
     var type = selector.match(/[a-z\.]*$/)[0]
-    selector = selector.replace(/\-[a-z\.]*$/, "")
+    selector = selector.replace(/\-[a-z\.]*$/, "") // remove type from selector
+    selector = selector.replace(/^_/, "") // remove "don't rerender underscore prefix" if it exists
     
     
     var template = fin._meta.templates[selector];
@@ -1389,29 +1457,37 @@ fin.cacheTemplate = function(selector, template_string) {
 	var dot_location_midpath = selector.replace(/_[^_]*$/, "").replace(/_/g, ".") 
 	
 	// auto namespace exported functions
-	tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin(`fin.fn."+dot_location_midpath+".$1`).val; fin.fn."+dot_location_midpath+".$1 = function $2(")
+	tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin(`fin.fn."+dot_location_midpath+".$1`).val; fin.fn."+dot_location_midpath+".$1 = function $2(")		
 	// mask escaped backticks
 	tmpl = tmpl.replace(/\\`/g, "___escaped_backtick___")
 
-	// .html templates need this
-	if(type === 'html') {
-				// 
-		tmpl = "var tmpl = [];"+
-				// print() append a string to template string at that location, for use inside [[ inline_js() ]] blocks
-				// @str: string to be added to the template
-				"function print(str){tmpl.push(str)};function addEvent(){__events.push(Array.prototype.slice.call(arguments, 0))};"+
-				// render() prints a placeholder div inline that will be replaced LATER with the subtemplate fragment rendered NOW inline
-				// @st string, subtemplate selector. ie: `welcome` for a template in /templates/welcome.html
-				"var subtmpls = []; var subid=0; function render(st, stdata){ var sid = `___subtmpl_id`+subid;subid++; print(`<div id='`+sid+`'></div>`); subtmpls.push({id: sid, fragment: fin.r(st, stdata)})};"+
-				// wrap the template
-				"var $rootNode = $(rootNode); tmpl.push(`"+tmpl+"`);";
+	
+
+	// if it's a js template, wrap it in inline_js() tags and then treat it as an html template
+	if(type === 'js') {
+		tmpl = "[["+tmpl+"]]"
 	}
+				// 
+	tmpl = "var tmpl = [];"+
+			// print() append a string to template string at that location, for use inside [[ inline_js() ]] blocks
+			// @str: string to be added to the template
+			"function print(str){tmpl.push(str)};function addEvent(){__events.push(Array.prototype.slice.call(arguments, 0))};"+
+			// render() prints a placeholder div inline that will be replaced LATER with the subtemplate fragment rendered NOW inline
+			// @st string, subtemplate selector. ie: `welcome` for a template in /templates/welcome.html
+			"var subtmpls = []; var subid=0; function render(st, stdata){ var sid = `___subtmpl_id`+subid;subid++; print(`<div id='`+sid+`'></div>`); subtmpls.push({id: sid, fragment: fin.r(st, stdata)})};"+
+			// wrap the template
+			"var $rootNode = $(rootNode); tmpl.push(`"+tmpl+"`);";
+
 	// inline [[ inline_js() ]]
-	tmpl = tmpl.replace(/\[\[(([^\[\[]|\r|\n|\r\n)*)]]/g, function($0, $1) {
+
+	tmpl = tmpl.replace(/\[\[(.*?)\]\]/g, function($0, $1) {
+		
 		// replace escaped newlines in [[ inline_js() ]] with a real newline character			
 		$0 = $0.replace(/\\t/g, "");
 		return $0.replace(/(\\r\\n|\\n|\\r)/g, "\n");
 	});
+
+
 	// wrap inline javascript in closure with print function 
 	// note: print() adds results to p string, which is returned by the closure function and concatenated into the template
 	tmpl = tmpl.replace(/\[\[/g, '`); ');
@@ -1472,10 +1548,13 @@ fin.cacheTemplate = function(selector, template_string) {
 			"var lines = sub.toString().split('\\\\n');" +
 			"line = lines.length + ' char ' + lines[lines.length-1].length; "+ 					
 			"fin.log.error(err.message, '"+template_location+"', line);}"; 
+	
 
 	template = new Function(['__events', 'data', 'rootNode'],tmpl)
-	if(type === 'fn.js') {
+
+	if(type === 'js') {
 		// if it's function template (with exports requiring auto namespaced function declarations) execute the declarations now
+		fin._meta.templates[selector] = template
 		template()
 	} else {
 		// if it's a template to be re-rendered then cache it.
@@ -1502,34 +1581,7 @@ fin.getFunctionArguments = function getFunctionArguments(params, named_args, unn
 	return args
 };
 
-fin.log = {
-	error: function logError(msg, url, line) {
-		var args = [];
-		
-		var args = ["%c Error %c ", "color:hsl(0, 100%, 90%);background-color:hsl(0, 100%, 50%);"]; // red with white text
 
-		if(typeof url !== 'undefined') {
-			if (typeof line !== 'undefined') {
-				args[0] += "on line " + line + " of " + url + " %c ";
-			} else {
-				args[0] += "in " + url + " %c ";
-			}
-			
-			args.push("color:hsl(0, 0%, 80%);background-color:hsl(0, 0%, 0%);") // black with grey text
-		}
-
-		args[0] += msg;
-		args.push("color:hsl(100, 0%, 0%);background-color:hsl(0, 0%, 100%);") // white with black text
-
-		log.apply(this, args);
-	},
-
-	solution: function logSolution(msg) {
-		var args = ["%c Solution %c " + msg, "color:hsl(240, 100%, 90%);background-color:hsl(240, 100%, 50%);", "color:hsl(100, 0%, 0%);background-color:hsl(0, 0%, 100%);"];
-
-		log.apply(this, args);
-	}
-};
 
 fin.init = init // store the bootstrap function for edge cases where we need to re-init the fin object. eg: unit tests
 
