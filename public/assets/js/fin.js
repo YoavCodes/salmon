@@ -616,9 +616,11 @@ fin.nav = function(key, containers) {
 	}
 	var reserved_keywords = ['before_func', 'after_func'];
 	var missing_templates = [];
+	var containers = fin.settings.containers;
 	// if we don't have all the required templates, then fetch them
-	for(var container in nav_obj) {
-		if(reserved_keywords.indexOf(container) >= 0) {
+	for(var c=0; c<containers.length; c++) {		
+		var container = containers[c]
+		if(reserved_keywords.indexOf(container) >= 0 || typeof nav_obj[container] === 'undefined') {
 			continue;
 		}
 		for(var i=0; i<nav_obj[container].length; i++) {
@@ -657,6 +659,10 @@ fin.nav = function(key, containers) {
 			for (var i = 0; i < fns.length; i++) {
 				var fn = fns[i][0];
 				var args = fns[i][1];
+				if(typeof args === 'undefined') {
+					args = {}
+				}
+
 				// if it's a string, do a dot.key lookup
 				if(typeof fn === 'string') {
 					fn = fin(fn).val;
@@ -673,8 +679,8 @@ fin.nav = function(key, containers) {
 	function _nav() {
 
 		//clear field errors
-		$('input').parent().removeAttr('original-title')
-		//$('.tipsy').hide()
+		//$('input').parent().removeAttr('original-title')
+		
 
 
 		// run before functions
@@ -684,18 +690,20 @@ fin.nav = function(key, containers) {
 		var scrollToTop = false
 
 		reserved_keywords.push('require');
+		var r = 0;
+		
+		var _render = function (container) {	
 
-		for(var container in nav_obj) {		
-			if(reserved_keywords.indexOf(container) >= 0) {
-				continue;
+			var container = containers[r]
+			if(reserved_keywords.indexOf(container) >= 0 || typeof nav_obj[container] === 'undefined') {
+				r++;
+				if (r < containers.length) {
+					_render(containers[r])
+				}
+				return
 			}
-
-
 			// mark rendered templates to be cleared
 			$('#' + container + ' > div' ).addClass('toclear');
-
-
-			
 
 			for (var i = 0; i < nav_obj[container].length; i++) {
 				var template_name = nav_obj[container][i]
@@ -727,8 +735,18 @@ fin.nav = function(key, containers) {
 					}
 				}
 				
-			}							
+			}	
+
+			r++;
+			if (r < containers.length) {
+				// note: next template may require dom elements from this template to finish rendering
+				// ensure next render execution frame is moved to the end of the execution stack
+				setTimeout(function(){ _render(containers[r]) },0);		
+			}
+
 		}
+
+		_render((containers[r]));		
 
 		// keep track of the last nav function run
 		fin._meta.last_nav(key);
@@ -1391,6 +1409,7 @@ fin.cacheTemplate = function(selector, template_string) {
 	// inline [[ inline_js() ]]
 	tmpl = tmpl.replace(/\[\[(([^\[\[]|\r|\n|\r\n)*)]]/g, function($0, $1) {
 		// replace escaped newlines in [[ inline_js() ]] with a real newline character			
+		$0 = $0.replace(/\\t/g, "");
 		return $0.replace(/(\\r\\n|\\n|\\r)/g, "\n");
 	});
 	// wrap inline javascript in closure with print function 
