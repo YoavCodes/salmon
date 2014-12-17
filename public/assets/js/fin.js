@@ -984,7 +984,7 @@ fin.getData = function(_params, _callback) {
 			try {
 				fin.cacheTemplate(i, $.parseJSON(res.templates[i]))
 			} catch(err) {
-				fin.log.error("(error parsing template) "+ err.message, i.replace("-", ".")) 
+				fin.log.error("(error parsing template) "+ err.message, "/templates/"+i.replace("-", ".").replace(/_/g, "/") )
 				if(err.message.match(/ILLEGAL/)) {
 					fin.log.solve("make sure you're using backticks for strings correctly, double quotes outside of a backtick or single quote delineated string, are ILLEGAL tokens")	
 				}
@@ -1449,25 +1449,16 @@ fin.cacheTemplate = function(selector, template_string) {
 		// look for template in the DOM				
 		tmpl = $('#template_' + selector + '-' + type).html(); // JSON.stringify will convert newlines to \n				
 	}
-	tmpl = JSON.stringify(tmpl);
-	tmpl = tmpl.slice(1, tmpl.length-1); // remove extra double-quotes added by JSON.stringify				
-	
-	// so exports.test_function in templates/news/posts/handlers.js
-	// gets namespaced to fin.fn.news.posts.handlers.test_function()
-	var dot_location_midpath = selector.replace(/_[^_]*$/, "").replace(/_/g, ".") 
-	
-	// auto namespace exported functions
-	tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin(`fin.fn."+dot_location_midpath+".$1`).val; fin.fn."+dot_location_midpath+".$1 = function $2(")		
-	// mask escaped backticks
-	tmpl = tmpl.replace(/\\`/g, "___escaped_backtick___")
-
-	
-
+	tmpl = JSON.stringify(tmpl); // converts template to one line for regexes to work better
+	// note: doublequotes in tmpl will have been escaped
+	tmpl = tmpl.slice(1, tmpl.length-1); // remove extra double-quotes added by JSON.stringify
 	// if it's a js template, wrap it in inline_js() tags and then treat it as an html template
 	if(type === 'js') {
 		tmpl = "[["+tmpl+"]]"
-	}
-				// 
+	}	
+	tmpl = tmpl.replace(/\\\\\\"/g, "___escaped_doublequote___");
+	tmpl = tmpl.replace(/\\"/g, '___doublequote___'); // unescape doublequotes
+	// template compilation functions
 	tmpl = "var tmpl = [];"+
 			// print() append a string to template string at that location, for use inside [[ inline_js() ]] blocks
 			// @str: string to be added to the template
@@ -1477,22 +1468,40 @@ fin.cacheTemplate = function(selector, template_string) {
 			"var subtmpls = []; var subid=0; function render(st, stdata){ var sid = `___subtmpl_id`+subid;subid++; print(`<div id='`+sid+`'></div>`); subtmpls.push({id: sid, fragment: fin.r(st, stdata)})};"+
 			// wrap the template
 			"var $rootNode = $(rootNode); tmpl.push(`"+tmpl+"`);";
+	// so exports.test_function in templates/news/posts/handlers.js
+	// gets namespaced to fin.fn.news.posts.test_function()
+	var dot_location_midpath = selector.match(/(.*)_/) || ""
+	if(dot_location_midpath.length === 2) {
+		dot_location_midpath = dot_location_midpath[1]
+		dot_location_midpath = dot_location_midpath.replace(/_[^_]*$/, "").replace(/_/g, ".") +""
+	} 
+	// auto namespace exported functions
+	tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin(`fin.fn."+dot_location_midpath+"$1`).val; fin.fn."+dot_location_midpath+"$1 = function $2(")				
+
+	// mask escaped backticks
+	tmpl = tmpl.replace(/\\`/g, "___escaped_backtick___")	
 
 	// inline [[ inline_js() ]]
-
 	tmpl = tmpl.replace(/\[\[(.*?)\]\]/g, function($0, $1) {
-		
+		//$0 = $0.replace(/"/g, "___escaped_doublequote___")
 		// replace escaped newlines in [[ inline_js() ]] with a real newline character			
 		$0 = $0.replace(/\\t/g, "");
-		return $0.replace(/(\\r\\n|\\n|\\r)/g, "\n");
+		return $0.replace(/(\\r\\n|\\n|\\r)/g, "___newline___");
 	});
-
-
+	
 	// wrap inline javascript in closure with print function 
 	// note: print() adds results to p string, which is returned by the closure function and concatenated into the template
 	tmpl = tmpl.replace(/\[\[/g, '`); ');
 	tmpl = tmpl.replace(/\]\]/g, "; tmpl.push(`");
-		
+
+	// replace newlines in inline_js multiline strings
+	tmpl = tmpl.replace(/``|([`])(?:(?=(\\?))\2.)[\s\S]*?\1/g, function(_string, _first_match) {
+		_string = _string.replace(/___newline___/g, "\\n");
+		return _string
+	})
+
+	tmpl = tmpl.replace(/___newline___/g, "\n")
+
 	// template error stacktrace-ability
 	var template_location = ""
 	// was it loaded from the server, or inline?
@@ -1506,12 +1515,13 @@ fin.cacheTemplate = function(selector, template_string) {
 		template_location = "#" + selector + "-" + type + " in " + template_location
 	} else {
 		template_location = "root/templates/" + selector.replace(/_/g, "/") + "." + type
-	}
-	
+	}	
 	
 	// parse & rejigger template into javascript
 	tmpl = tmpl.replace(/``|([`])(?:(?=(\\?))\2.)[\s\S]*?\1/g, function(_string, _first_match) {				
 		//_string = _string.replace(/\\`/g, '{{ "\'" }}') // escape backtick edge case
+		_string = _string.replace(/___doublequote___/g, '___escaped_doublequote___'); // escape doublequotes inside backtick strings
+		
 		// concat multiline quotes, preserving multiline-edness
 		_string = _string.replace(/(\r\n|\n|\r)/g, "\\n` + $1`"); 
 		// remove empty inline vars {{ }} to prevent errors
@@ -1525,31 +1535,36 @@ fin.cacheTemplate = function(selector, template_string) {
 		return _string
 	})
 
-	// template compilation functions
 	// join the template and append
 	tmpl += ";tmpl = tmpl.join(``);$rootNode.append(tmpl);"+
 			// loop over rendered subtemplates replacing their placeholder tags with their rendered fragments
 			"for(var i=0; i<subtmpls.length; i++) { $rootNode.find(`#`+subtmpls[i].id).replaceWith(subtmpls[i].fragment) };";
-
+	
 	tmpl = tmpl
 		// escape unescaped double quotes
 		.replace(/([^\\]|^)(")/g, '$1\\"') // regex: character is not escape or is start of string followed by ", replace second group with \"
 		// then convert backticks to double quotes
 		.replace(/`/g, '"') 
 		// unmask escaped backticks
-		.replace(/___escaped_backtick___/g, "`") 
+		.replace(/___escaped_backtick___/g, "`");
+
+	tmpl = tmpl.replace(/___doublequote___/g, '"')	
+	tmpl = tmpl.replace(/___escaped_doublequote___/g, '\\"')
+
+	
+	tmpl = tmpl.replace(/___escaped_newline___/g, "\\n")
 	// template stack traceability
 	// adding a try/catch block that prints a stack trace, uses a regex to get the line/char number of the template file, modifies it to reflect the code and the prints out a pretty error in the console
 	tmpl = "try {" + tmpl + "} catch(err) {"+					
 			"var line = err.stack.match(/>(:[0-9]+:[0-9]+)/)[0].replace('>', '');"+
 			"var line_array = line.split(':'); "+
 			"var c = parseInt(line_array[2], 10);" +
+			//"this.salmon_api_fin = this.salmon_api_fin || '';" +
 			"var sub = this."+selector+".toString().substr(0, c+51);" +
 			"var lines = sub.toString().split('\\\\n');" +
 			"line = lines.length + ' char ' + lines[lines.length-1].length; "+ 					
 			"fin.log.error(err.message, '"+template_location+"', line);}"; 
-	
-
+		
 	template = new Function(['__events', 'data', 'rootNode'],tmpl)
 
 	if(type === 'js') {
