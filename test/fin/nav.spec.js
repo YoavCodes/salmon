@@ -105,7 +105,7 @@ describe("fin.nav", function(){
 	// todo: test routes when phantomjs is upgraded
 
 	it("should navigate to a page, render templates replacing contents of the container", function(){				
-		fin.nav("home");
+		fin.nav("home");		
 		expect($("#container .block.block_welcome").html()).toBe("welcome template"); // rendered home page
 		fin.nav("thanks");			
 		expect($("#container .block.block_welcome").length).toBe(0); // removed home page templates

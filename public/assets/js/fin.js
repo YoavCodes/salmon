@@ -677,7 +677,7 @@ fin.nav = function(key, containers) {
 				missing_templates.push( t_name )
 			}
 		}
-	}
+	}	
 	// we need a docFrag copy of body to work with later.
 	var docFrag = $('body').clone(true, true);
 	// if we're missing some templates, get them before navigating, otherwise just navigate
