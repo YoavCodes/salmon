@@ -1485,10 +1485,9 @@ fin.cacheTemplate = function(selector, template_string) {
 	tmpl = tmpl.replace(/\[\[(.*?)\]\]/g, function($0, $1) {
 		//$0 = $0.replace(/"/g, "___escaped_doublequote___")
 		// replace escaped newlines in [[ inline_js() ]] with a real newline character			
-		$0 = $0.replace(/\\t/g, "");
+		//$0 = $0.replace(/\\t/g, "___escaped_tab___");
 		return $0.replace(/(\\r\\n|\\n|\\r)/g, "___newline___");
 	});
-	
 	// wrap inline javascript in closure with print function 
 	// note: print() adds results to p string, which is returned by the closure function and concatenated into the template
 	tmpl = tmpl.replace(/\[\[/g, '`); ');
@@ -1521,7 +1520,7 @@ fin.cacheTemplate = function(selector, template_string) {
 	tmpl = tmpl.replace(/``|([`])(?:(?=(\\?))\2.)[\s\S]*?\1/g, function(_string, _first_match) {				
 		//_string = _string.replace(/\\`/g, '{{ "\'" }}') // escape backtick edge case
 		_string = _string.replace(/___doublequote___/g, '___escaped_doublequote___'); // escape doublequotes inside backtick strings
-		
+		_string = _string.replace(/\\t/g, "___escaped_tab___");
 		// concat multiline quotes, preserving multiline-edness
 		_string = _string.replace(/(\r\n|\n|\r)/g, "\\n` + $1`"); 
 		// remove empty inline vars {{ }} to prevent errors
@@ -1548,6 +1547,8 @@ fin.cacheTemplate = function(selector, template_string) {
 		// unmask escaped backticks
 		.replace(/___escaped_backtick___/g, "`");
 
+	tmpl = tmpl.replace(/\\t/g, '\t')	
+	tmpl = tmpl.replace(/___escaped_tab___/g, '\\t')	
 	tmpl = tmpl.replace(/___doublequote___/g, '"')	
 	tmpl = tmpl.replace(/___escaped_doublequote___/g, '\\"')
 
