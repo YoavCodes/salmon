@@ -98,7 +98,7 @@ describe("fin.nav", function(){
 	});
 
 
-	it("should render the default page on start", function(){				
+	/*it("should render the default page on start", function(){				
 		// todo: upgrade phantomjs to version with window.onhashchange
 		//expect(fin._meta.last_nav()).toBe("home");
 	});
@@ -183,7 +183,7 @@ describe("fin.nav", function(){
 	it("should not close open tags when rendering inline templates", function() {
 		fin.nav("opentags");
 		expect($("#container .block.block_inlinerenderopentags b").html()).toBe('<div class="block block_inlinerenderchild2">inlinerenderchild2 template<button class="clickme">click me fight</button></div>')
-	})
+	})*/
 
 	// todo: updating docs https://github.com/YoavGivati/salmon/wiki/Templating-Overview
 	// todo: remove .js templates and simplify code.
