@@ -681,14 +681,14 @@ fin.nav = function(key, containers) {
 	// we need a docFrag copy of body to work with later.
 	var docFrag = $('body').clone(true, true);
 	// if we're missing some templates, get them before navigating, otherwise just navigate
+	var params;
 	if(missing_templates.length > 0) {
-		var params = {
+		params = {
 			template_list: missing_templates.toString()
 		};		
-		fin.getData(params, _nav);
-	} else {
-		_nav();
-	}
+	} 
+	
+	fin.getData(params, _nav);
 
 	// todo: add callback here
 
@@ -1020,9 +1020,8 @@ fin.handleJsonp = function(response) {
 	// clone res
 	var res = $.extend({}, response);
 	// create independent function
-	(function(res){
-		log('handling jsonp')
-  	log(res)
+	
+		  	
   	// extend data object
   	$.extend(true, fin.data, res.data)
   	// get rid of the ajax iframe
@@ -1030,12 +1029,12 @@ fin.handleJsonp = function(response) {
   	// handle result
   	if(res.meta.status === 200) {
   		// handle success
-		if(typeof res.meta.onSuccess !== "undefined" && typeof fin(res.meta.onSuccess).val === "function") {
+		if(res.meta.onSuccess !== "undefined" && typeof fin(res.meta.onSuccess).val === "function") {
 			// dev is handling this form's success
 			fin(res.meta.onSuccess).val(res)
 		} else {
 			// let user know if they specified an onSuccess handler for the form, but forgot to define it.
-			if(typeof res.meta.onSuccess !== "undefined" && typeof fin(res.meta.onSuccess).val !== "function") {
+			if(res.meta.onSuccess !== "undefined" && typeof fin(res.meta.onSuccess).val !== "function") {
 				fin.log.error(res.meta.onSuccess + "() is not defined. Using global onSuccess handler")
 			}
 			// generic form success
@@ -1043,20 +1042,18 @@ fin.handleJsonp = function(response) {
 				// dev is handling generic form sucess
 				typeof fin.settings.global_form_onSuccess(res)
 			} else {
-				// generic form success 
-				log(res.meta.status)
-				log(res)
+				// generic form success 				
 			}
 		}
 	} else {
 		// handle error
-	  	if(typeof res.meta.onError !== "undefined" && typeof fin(res.meta.onError).val === "function") {
+	  	if(res.meta.onError !== "undefined" && typeof fin(res.meta.onError).val === "function") {
 	  		// dev is handling this form's error
 	  		fin(res.meta.onError).val(res)
 
 	  	} else {
 	  		// let user know if they specified an onError handler for the form, but forgot to define it.
-	  		if(typeof res.meta.onError !== "undefined" && typeof fin(res.meta.onError).val !== "function") {
+	  		if(res.meta.onError !== "undefined" && typeof fin(res.meta.onError).val !== "function") {
 				fin.log.error(res.meta.onError + "() is not defined. Using global onError handler")
 			}
 	  		// generic form error
@@ -1065,15 +1062,12 @@ fin.handleJsonp = function(response) {
 				typeof fin.settings.global_form_onError(res)
 			} else {
 				// generic form error 
-				log(res.meta.status)
-				log(res.meta.error_messages)
-				log(res)
+				// todo:
 			}
 	  	}
 	}
 
-	//setTimeout(function(){log('-----');log(res)},0)
-	})(res)		
+	
 };
 
 	/*
@@ -1300,11 +1294,14 @@ fin.submit = function(e) {
 			// validation failed				
 			e.preventDefault();	
 			e.stopImmediatePropagation();
-			// validation failed, execute the error display function if one was specified as a form attribute
-			// otherwise exist
-			var errorDisplayFn = fin(form.attr('errorDisplayFn')).val;
-			if(typeof errorDisplayFn === 'function') {
-				errorDisplayFn(form);
+			// validation failed, execute the error display function if one was specified as a form attribute			
+			if(typeof form.attr('onError') !== 'undefined') {
+				if(typeof fin(form.attr('onError')).val === 'function') {
+					onError();
+				} else {
+					// generic form error
+					// todo:					
+				}
 			}
 			return 
 		}
@@ -1319,7 +1316,12 @@ fin.submit = function(e) {
 	var targetiframe_id = "ajaxpersistantiframe"+(num_persistant_iframes-1);
 
 	// setup form
-	form.attr('target', targetiframe_id)
+	form.attr('target', targetiframe_id);
+	form.attr('action', '/0');
+	form.attr('method', 'post');
+
+	// remove hidden fields.
+	form.find('[name="pathname"], [name="hashbang"], [name="command"], [name="onSuccess"], [name="onError"], [name="ajaxiframe_id"]').remove();
 
 	// hidden inputs
 	form.append('<input type="hidden" name="pathname" value="'+fin._meta.pathname+'" />' +
@@ -1473,7 +1475,7 @@ fin.cacheTemplate = function(selector, template_string) {
 	var dot_location_midpath = selector.match(/(.*)_/) || ""
 	if(dot_location_midpath.length === 2) {
 		dot_location_midpath = dot_location_midpath[1]
-		dot_location_midpath = dot_location_midpath.replace(/_[^_]*$/, "").replace(/_/g, ".") +""
+		dot_location_midpath = dot_location_midpath.replace(/_[^_]*$/, "").replace(/_/g, ".") + "."
 	} 
 	// auto namespace exported functions
 	tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin(`fin.fn."+dot_location_midpath+"$1`).val; fin.fn."+dot_location_midpath+"$1 = function $2(")				
@@ -1720,6 +1722,7 @@ $.extend(true, fin.pg, init.prototype.plugins); // init.prototype is preserved e
 $(document).ready(function(){
 	// the starter ajax response iframe
 	$('body').append('<iframe id="ajaxpersistantiframe0" name="ajaxpersistantiframe0" style="display:none;" class="ajaxformiframe persistant"></iframe>');
+	$('body').on('submit', fin.submit);
 
 	window.onbeforeunload = fin.onbeforeunload;
   	
