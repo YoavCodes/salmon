@@ -1,27 +1,25 @@
-/* extras.fin.js v1.0.0
- * Copyright 2012-2013, Yoav Givati ( hello@yoavgivati.com )
- * http://highf.in ~ http://chalkhq.com
+/* plugin.fin.js v1.0.0
+ * Copyright 2012-2013, Author ( author@email.com )
+ * http://website.com
  *
- * Released under the MIT license
- * http://highf.in/license
+ * Released under licence
  *
- * 
- * Updated: 15-11-2014
- * This is a fin plugin boilerplate. the <script> tag for this file should be after the <script> tag for fin.js but before calling Fin()
- * after calling Fin(), testfunc will be available at fin.util.testfunc()
+ * Updated: 
+ * This is the fin plugin boilerplate. Include this file after fin.js but before calling fin.init()
+ * In the example below, testfunc will be available at fin.pg.myPlugin.testfunc after calling fin.init()
  */
-;(function($, Fin) {
+;(function($, fin) {
 
-if(typeof Fin.prototype.plugins === 'undefined') {
-	Fin.prototype.plugins = {};
+if(typeof fin.prototype.plugins === 'undefined') {
+	fin.prototype.plugins = {};
 }
 
-$.extend(true, Fin.prototype.plugins, {
-	testfunc: function testfunc() {
-		fin.util.log.solution('hello '+fin.settings.containers[0]);
+$.extend(true, fin.prototype.plugins, {
+	myPlugin: {
+		testfunc: function testfunc() {
+			fin.util.log.solution('hello plugin');
+		}
 	}
 })
 
-})(jQuery, Fin);
-
-
+})(jQuery, fin);
