@@ -614,6 +614,7 @@ fin._meta = {
 	last_nav_array: [],
 	// loading queue
 	loading: [],
+	num_persistant_iframes: 0
 };
 
 // used for storing generic meta/state data in your app
@@ -991,20 +992,20 @@ fin.getData = function(_params, _callback) {
 			} 
 		}
 
-		if(res.meta.status == 200) { 
-			
-			
+		switch(res.meta.status) {
+			case 200:
+				// extend the data model
+				// requires much more advanced cache control
+				$.extend(true, fin.data, res.data)
+				//fin.data = res.data
+				if(typeof _callback !== 'undefined') {
+					_callback()
+				}
+				break;			
+		}
 
-			// extend the data model
-			// requires much more advanced cache control
-			$.extend(true, fin.data, res.data)
-			//fin.data = res.data
-			if(typeof _callback !== 'undefined') {
-				_callback()
-			}
-
-		} else if(res.meta.status === 401) {
-			//fin.nav('login')
+		if(res.meta.redirect) {
+			document.location = res.meta.redirect;
 		}
 	})
 
@@ -1062,9 +1063,17 @@ fin.handleJsonp = function(response) {
 				typeof fin.settings.global_form_onError(res)
 			} else {
 				// generic form error 
-				// todo:
+				// todo, some kind of alert. integrate with global loader: 
+				fin.log.error(res.meta.errors.join('\n'))
 			}
 	  	}
+	}
+
+	// if we got a redirect, follow it.
+	// todo: test impact / caveats / use cases for onSuccess and onError when redirect happens.
+	// should we let form response event handlers work on teh dom before redirecting?
+	if(res.meta.redirect) {
+		document.location = res.meta.redirect;
 	}
 
 	
@@ -1309,10 +1318,11 @@ fin.submit = function(e) {
 
 
 	//return true
-	var num_persistant_iframes = $('.persistant').length;
+	var num_persistant_iframes = fin._meta.num_persistant_iframes;
+	// increment
+	fin._meta.num_persistant_iframes += 1;
 	// create an iframe that will persist until server response
 	var ajaxiframe_id = "ajaxpersistantiframe"+num_persistant_iframes;;
-
 	var targetiframe_id = "ajaxpersistantiframe"+(num_persistant_iframes-1);
 
 	// setup form
@@ -1722,6 +1732,8 @@ $.extend(true, fin.pg, init.prototype.plugins); // init.prototype is preserved e
 $(document).ready(function(){
 	// the starter ajax response iframe
 	$('body').append('<iframe id="ajaxpersistantiframe0" name="ajaxpersistantiframe0" style="display:none;" class="ajaxformiframe persistant"></iframe>');
+	fin._meta.num_persistant_iframes += 1;
+	
 	$('body').on('submit', fin.submit);
 
 	window.onbeforeunload = fin.onbeforeunload;

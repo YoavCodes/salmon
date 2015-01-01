@@ -27,6 +27,11 @@ function handleApi(req, res) {
         res['files'] = files
         // keep a reference to the request so we don't have to keep passing it over
         res['req'] = req
+        // convenience function for client-side redirects
+        // make sure you call res.kill() with a 301, 302, 401, or related status code
+        res['redirect'] = function(path) {
+            res.response.meta['redirect'] = path;            
+        }
         // convenience function to handle api response
         res['kill'] = function(status, contentType) {
             if (typeof contentType === 'undefined') {
