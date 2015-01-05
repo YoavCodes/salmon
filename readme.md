@@ -1,13 +1,13 @@
 # Status
-The framework is currently in active development and should be considered alpha/beta quality depending on what you use it for. Most of the api is stable, tests are being added, but there are still some features planned before releasing a fully functional v1.0.0
+The framework is currently in active development and should be considered somewhere between an alpha and beta depending on what you use it for. Most of the api is stable, tests are being added, but there are still some features planned before releasing a fully functional v1.0.0 and it's evolving in sync with the suite of highfin build and deploy tools.
 
 # Salmon - Lightning Fast Overview
-Salmon is a fat-client Javascript framework backed by a node.js api server for building rich apps fast. 
+Salmon is a thick-client javascript framework backed by a razor-thin node.js server. Designed to help you build apps the way you want, faster than you could without it. Salmon aims to strike a better balance between speed, ease of reasoning, beautiful code, rich feature set, and automation while maintaining a certain degree of flexibility.
 
 # hello world
 to get started
 
-cd into the ./web/ directory and run $node salmon
+$node salmon
 
 then visit 127.0.0.1:8080 in your browser
 
