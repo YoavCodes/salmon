@@ -9,8 +9,7 @@
   },
   "dependencies": {    
     "formidable": "1.0.14",
-    "node-static": "latest",
-    "mongodb": "latest"
+    "node-static": "latest"
   },
   "devDependencies": {
   },
