@@ -156,9 +156,8 @@ var path = require('path');
 // define app paths, passing in the base project directory
 require('./tail/paths')(__dirname + '/../');
 
-// bootstrap the application
-// bootstraps the app then exports a set of functions that may be used later in certain edge cases
-tail.util.bootstrap = require('./tail/bootstrap-utils');
+// load application files
+tail.util.load = require('./tail/load-app');
 
 // load the static file server / global request handler
 require('./tail/server');
