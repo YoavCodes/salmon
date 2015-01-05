@@ -6,7 +6,7 @@
 			"version": "0.10.28",
 			"main": "./salmon.js",
 			"watch": ["./"],
-			"exclude": ["./.git","./node/.grunt", "./node/_SpecRunner.html", "./node/node_modules", "./libs/node_modules"],
+			"exclude": ["./.git", "./data", "./node/.grunt", "./node/_SpecRunner.html", "./node/node_modules", "./libs/node_modules"],
 			"less": [ {"from": "./public/assets/less", "to": "./public/assets/css", "min": false} ],
 			"jasmine": {"frontend": "./test/fin", "backend": "./test/tail"},
 			"cachecontrol": ["./public", "./template"],			
