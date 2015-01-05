@@ -65,9 +65,16 @@ $.ajaxSetup({
 */
 var fin = function fin(obj_path, object){
 
-	if(typeof obj_path !== 'string') {
-		return
-	}	
+	if(obj_path === null || typeof obj_path === "undefined") {
+		obj_path = "";
+	} else if(typeof obj_path === 'object'){
+		// objects, functions, arrays ie: anything that can store properties.
+		object = obj_path;
+		obj_path = '';
+	} else {
+		// number, boolean, string. cast to string
+		obj_path = "" + obj_path
+	}
 
 	// filters are used to filter out properties of an object based on their properties. useful if you have an object of blog post objects
 	// that you want to filter by author
@@ -83,6 +90,27 @@ var fin = function fin(obj_path, object){
 		val: void 0, // the final value of the property specified in obj_path, after following the dotkey chain		
 		// manipulating values/properties that store the first dotkey before following the chain
 		key: "", // if the value of obj_path is a dotkey, store the dotkey string here. we only care about the dotkey at the original obj_path. not the rest in the chain		
+		last_key: obj_path,
+		last_insert_id: void 0, // chaining calls after insert can access the row id
+		create_nodes: false, // toggle to true to create object nodes if they don't exist, useful for saving data to the model.
+		/*
+			return findings
+		*/
+		// return a template friendly version of the value
+		// eg: normally in order to traverse nodes fin() will create object nodes at each step
+		// string() will return an empty string for null, undefined, {} values
+		// this is helpful if you want to print out values in a template if they exist {{ fin('value.does.not.exist') }} will print an empty string
+		string: function() {
+			if (typeof this.val === 'undefined' || this.val === null || this.val.constructor === Object && Object.keys(this.val).length === 0) {
+				return "";
+			} else {
+				return this.val.toString();
+			}
+		},
+		// cast the value to a boolean
+		bool: function() {
+			return (this.val == true);
+		},
 		/*
 			modify findings
 		*/
@@ -90,14 +118,60 @@ var fin = function fin(obj_path, object){
 		find: function(dot_path) {
 			return fin(dot_path, findings.val);
 		},
+		// returns the value of a subnode without modifying our current findings object
+		get: function(dot_path) {			
+			return fin(dot_path, findings.val).val;
+		},
+		// gets the property of the current val, changing val, but not the rest of the findings object
+		// useful for querying a single record by rowid. without the overhead of sort. 
+		// eg: tail.db('posts').getResult('1') instead of tail.db('posts').where('rowid').is('1').results()
+		// note: because get() changes the value of .val without changing any of the other findings properties
+		// it's only useful just before calling .result(), so .result() is called for you
+		// if you want the record itself use find('1').val instead.
+		getResult: function(dot_path) {
+			this.val = fin(dot_path, findings.val).val;
+			return this.result();
+		},
 		// set a new value
 		set: function(new_value, follow_dotkeys) {
+			this.create_nodes = true;
 			dot(obj_path, object, findings, false, new_value, follow_dotkeys);
 			return findings;
 		},
 		// deletes the property and value at the end of the lookup chain and then regressively changes dot.string's followed to get there
 		remove: function(follow_dotkeys) {
 			dot(obj_path, object, findings, true, void 0, follow_dotkeys);						
+		},
+		// adds a child document to a collection
+		insert: function(child) {
+			if(this.val)
+			// get nextid
+			// todo: race condition, create database lock mechanism that prevents inserting a child of a collection
+			// while an insert is taking place. maybe store it in info __insert_lock
+			var __index = fin(this.last_key, _data.info).find('index');
+			var id = (parseInt(__index.val, 10) || 0) + 1;
+			__index.set(id);
+
+			child.rowid = id.toString();
+
+			this.val[id] = child;
+
+			this.last_insert_id = id;
+			changed = true;
+			return findings;
+		},
+		// get the item we just inserted
+		inserted_child: function() {
+			if(typeof last_insert_id === 'undefined') return null;
+
+			return this.val[ this.last_insert_id ];
+		},
+		// extend a record. eg: if post has a date_created timestamp generated during insert i can pass in {title:'new title'}
+		// to just update the title of the object.
+		// you could just query the record, record.title = 'new title'; tail.db.save(); if you only care about once record
+		// but passing in an object that extends one or more records is easier using this update(partial_record) method.
+		update: function(partial_record) {
+			// todo
 		},
 
 		/*
@@ -248,17 +322,109 @@ var fin = function fin(obj_path, object){
 
 			return results
 
+		},
+		// get properly structured result object and resolve dot key references
+		// todo: optimize the shit out of all this, db indexes, schema definitions, and so on.
+
+		/*
+		sort() applies the filter and returns an array. maybe it should store results in findings.results.
+		if findings.results.length > 0, then use it, otherwise use findings.val
+
+		*/
+		results: function(sort_by) {			
+			if(sort_by === "sortByDate") {
+				return this.getResults( this.sort() );	
+			} else if(typeof sort_by === 'function') {
+				return this.getResults( this.sort(sort_by) );
+			} else {
+				return this.getResults( this.sort() );
+			}
+		},
+
+		result: function() {		
+			return this.getResults( [this.val] );
+		},
+
+		getResults: function(sorted_array) {						
+			// create data structure			
+			var results = {};			
+			
+			function buildTree(dot_path, val) {
+				// build tree				
+				var dot_path_array = dot_path.split('.');	
+				var key = dot_path_array.shift()
+				if(dot_path_array.length > 0) {
+					results[ key ] = results[ key ] || {}
+				}	else {
+					results[ key ] = val						 
+				}	
+				var path = results[ key ];
+
+				for(var i=0; i<dot_path_array.length; i++) {						
+					if(i === dot_path_array.length-1) {		
+						path = path[dot_path_array[i]] = val;	
+					} else {		
+						path = path[dot_path_array[i]] = {};
+					}						
+				}
+				
+				
+				return path;
+			}
+
+			for(var i=0; i<sorted_array.length; i++) {
+				
+				var key = this.last_key + "." + sorted_array[i].rowid
+				
+				buildTree(key, sorted_array[i])
+				
+				// resolve dot references, todo: use schema to find dot reference values and dotreference arrays
+				// build a proper recursive function
+				for(var prop in sorted_array[i]) {
+					if(typeof sorted_array[i][prop] === 'string' && sorted_array[i][prop].substr(0, 2) === '--' ) {
+						var dot_ref = sorted_array[i][prop].substr(2);
+						buildTree(dot_ref, fin(dot_ref).val);
+						
+					}
+				}
+			}
+			return results;
+		},
+		// sort results by comparing dates. 
+		// @date_field: string, object prop key that contains the date to compare
+		// @direction: string defaults to desc (newest first), can be asc (oldest first)
+		sortByDate: function(date_field, direction) {
+			return this.sort( function(a, b) {
+				if(direction === 'asc') {
+					var c = b; b = a; a = b;
+				}
+				return new Date( b[date_field] ) - new Date( a[date_field] );
+			});
 		}
 	}
 
 	function dot(dot_path, object, findings, remove, new_value, follow_dotkeys) {
+		var data_path = false;
+
+		if(dot_path.substr(0,2) === "__") {
+			dot_path = dot_path.substr(2);
+		}
+
+		if(dot_path.substr(0,2) === "--") {
+			dot_path = dot_path.substr(2);
+			data_path = true;
+		}
+
 		var path = dot_path.split('.');
 		// assume namespace is window if undefined
-		if(object == undefined) { // this will assert true for null or undefined, assuming the var exists, which it does in this scope, just doesn't have a value		
+		if(object == undefined && data_path === true) {
+			path.unshift(fin.data);
+		} else if(object == undefined) { // this will assert true for null or undefined, assuming the var exists, which it does in this scope, just doesn't have a value		
 			path.unshift(window); 
 		} else {
 			path.unshift(object);
 		}
+
 		// loop for iterating through object, following dot.paths
 		var value;
 		if(path.length > 0) {
@@ -272,13 +438,19 @@ var fin = function fin(obj_path, object){
 				if(typeof findings_val_path_i === 'undefined') {
 					// create a blank node if the key doesn't exist.. if we're trying to access it, it means we want it to exist
 					// this is a convenient way to create a new property and ensure all the parents exist				
-					findings.val[path_i] = {};
+					if(findings.create_nodes === true) {
+						findings.val[path_i] = {};
+					} else {						
+						findings.val = void 0;
+						return findings
+					}
 
 				} else if (findings_val_path_i === null) {				
 					return null
 				}				
 				// check if it's a dot.key
-				if(typeof findings_val_path_i === 'string' && findings_val_path_i.substr(0, 2) === "__") {
+				if(typeof findings_val_path_i === 'string' && findings_val_path_i.substr(0, 2) === "__" ||
+					typeof findings_val_path_i === 'string' && findings_val_path_i.substr(0, 2) === "--") {
 					var dot_string = findings_val_path_i.substring(2);	
 					// if findings.val is a dot string save it in findings.key
 					// note: since we only return the original findings, this will only represent the first dot.string at the obj_path value					
@@ -309,7 +481,9 @@ var fin = function fin(obj_path, object){
 					} else {
 						// do lookup
 						// we only care about findings.val or final value of nested dot lookups here, returned to the original findings object
-						findings.val = fin(dot_string).val;	
+						var lookup_chain = fin(dot_string);
+						findings.val = lookup_chain.val;	
+						findings.last_key = lookup_chain.last_key;
 					}
 
 				} else {	
@@ -336,6 +510,13 @@ var fin = function fin(obj_path, object){
 	return dot(obj_path, object, findings);
 };
 
+
+// alias for fin() when directly accessing the data model.
+// instead of fin('fin.data.posts').find(11).get('title')
+// can do fin.db('posts').find(11).get('title')
+fin.db = function(obj_path) {			
+	return fin(obj_path, fin.data);
+}
 
 // settings and defaults
 fin.settings = $.extend(true, {}, {		
@@ -678,7 +859,7 @@ fin.nav = function(key, containers) {
 				missing_templates.push( t_name )
 			}
 		}
-	}	
+	}
 	// we need a docFrag copy of body to work with later.
 	var docFrag = $('body').clone(true, true);
 	// if we're missing some templates, get them before navigating, otherwise just navigate
@@ -892,14 +1073,15 @@ fin.onHashchange = function(){
 	}
 	// parse hash segments
 	fin._meta.hashbang = fin._meta.hashbang.replace(/(^\/)|(\/$)/, ""); // regex: remove end slashes
+
 	//split
-	segments = fin._meta.hashbang.split("/");
+	fin._meta.segments = fin._meta.hashbang.split("/");
 
 	// try load route
 	// search routes for match, to determine page to render
 	// if hashbang is #!/news/search, will try `news/search`, and then `news` in fin.settings.routes until it finds a match
 	var match_bang = fin._meta.hashbang;
-	for(var i=0; i < segments.length; i++) {
+	for(var i=0; i < fin._meta.segments.length; i++) {
 		
 		if(typeof fin.settings.routes[match_bang] !== 'undefined') {
 			fin.nav(fin.settings.routes[match_bang]);
@@ -998,7 +1180,7 @@ fin.getData = function(_params, _callback) {
 				// requires much more advanced cache control
 				$.extend(true, fin.data, res.data)
 				//fin.data = res.data
-				if(typeof _callback !== 'undefined') {
+				if(typeof _callback === 'function') {
 					_callback()
 				}
 				break;			
@@ -1007,6 +1189,8 @@ fin.getData = function(_params, _callback) {
 		if(res.meta.redirect) {
 			document.location = res.meta.redirect;
 		}
+
+
 	})
 
 };
@@ -1020,9 +1204,8 @@ fin.handleJsonp = function(response) {
 	// this function will stop executing as soon as the ajaxiframe is removed and the reference to the response argument may also be lost
 	// clone res
 	var res = $.extend({}, response);
-	// create independent function
-	
-		  	
+	// create independent function	
+			
   	// extend data object
   	$.extend(true, fin.data, res.data)
   	// get rid of the ajax iframe
@@ -1035,15 +1218,16 @@ fin.handleJsonp = function(response) {
 			fin(res.meta.onSuccess).val(res)
 		} else {
 			// let user know if they specified an onSuccess handler for the form, but forgot to define it.
-			if(res.meta.onSuccess !== "undefined" && typeof fin(res.meta.onSuccess).val !== "function") {
+			if(res.meta.onSuccess !== 'undefined' && typeof fin(res.meta.onSuccess).val !== "function") {
 				fin.log.error(res.meta.onSuccess + "() is not defined. Using global onSuccess handler")
 			}
 			// generic form success
 			if(typeof fin.settings.global_form_onSuccess === "function") {
-				// dev is handling generic form sucess
+				// dev is handling  form success
 				typeof fin.settings.global_form_onSuccess(res)
 			} else {
-				// generic form success 				
+				// generic form success 
+				
 			}
 		}
 	} else {
@@ -1075,8 +1259,7 @@ fin.handleJsonp = function(response) {
 	if(res.meta.redirect) {
 		document.location = res.meta.redirect;
 	}
-
-	
+		
 };
 
 	/*
@@ -1291,6 +1474,7 @@ fin.v = {
 // ajax form submit handler. use [[ addEvent('submit', '#loginForm', fin.submit) ]] or [[ ajax('#loginForm') ]] in templates with ajaxforms
 // to ajaxify them.
 fin.submit = function(e) {
+	
 	var form = $(e.target);
 
 	var validator = fin(form.attr('validator')).val;
@@ -1323,6 +1507,7 @@ fin.submit = function(e) {
 	fin._meta.num_persistant_iframes += 1;
 	// create an iframe that will persist until server response
 	var ajaxiframe_id = "ajaxpersistantiframe"+num_persistant_iframes;;
+
 	var targetiframe_id = "ajaxpersistantiframe"+(num_persistant_iframes-1);
 
 	// setup form
@@ -1488,7 +1673,7 @@ fin.cacheTemplate = function(selector, template_string) {
 		dot_location_midpath = dot_location_midpath.replace(/_[^_]*$/, "").replace(/_/g, ".") + "."
 	} 
 	// auto namespace exported functions
-	tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin(`fin.fn."+dot_location_midpath+"$1`).val; fin.fn."+dot_location_midpath+"$1 = function $2(")				
+	tmpl = tmpl.replace(/exports\.([^ \r\n]+)[ ]*= function[ ]*([^(]*)\(/g, "fin(`fin.fn."+dot_location_midpath+"$1`).set({}); fin.fn."+dot_location_midpath+"$1 = function $2(")				
 
 	// mask escaped backticks
 	tmpl = tmpl.replace(/\\`/g, "___escaped_backtick___")	
@@ -1569,6 +1754,7 @@ fin.cacheTemplate = function(selector, template_string) {
 	// template stack traceability
 	// adding a try/catch block that prints a stack trace, uses a regex to get the line/char number of the template file, modifies it to reflect the code and the prints out a pretty error in the console
 	tmpl = "try {" + tmpl + "} catch(err) {"+					
+			"if(typeof this."+selector+" === 'undefined') {log(err); return};"+
 			"var line = err.stack.match(/>(:[0-9]+:[0-9]+)/)[0].replace('>', '');"+
 			"var line_array = line.split(':'); "+
 			"var c = parseInt(line_array[2], 10);" +
@@ -1733,7 +1919,7 @@ $(document).ready(function(){
 	// the starter ajax response iframe
 	$('body').append('<iframe id="ajaxpersistantiframe0" name="ajaxpersistantiframe0" style="display:none;" class="ajaxformiframe persistant"></iframe>');
 	fin._meta.num_persistant_iframes += 1;
-	
+
 	$('body').on('submit', fin.submit);
 
 	window.onbeforeunload = fin.onbeforeunload;

@@ -16,7 +16,7 @@ function handleApi(req, res) {
                 errors: [],
             },
             data: {
-                // result data goes here, will extend the tail global object tail.util.extend(tail.data, response.data) when it gets to the browser
+                // result data goes here, will extend the fin global object $.extend(fin.data, response.data) when it gets to the browser
                 // so data paths must be consistent with the front-end
             }
         }
@@ -27,6 +27,16 @@ function handleApi(req, res) {
         res['files'] = files
         // keep a reference to the request so we don't have to keep passing it over
         res['req'] = req
+        // add error and info/success messages to the response
+        res['msg'] = function(type, msg) {
+            if(!res.response.meta[type+'s']) res.response.meta[type+'s'] = [];            
+            res.response.meta[type+'s'].push(msg);
+        }
+        // ending on an error
+        res['error'] = function(status, msg) {
+            res.msg('error', msg);
+            res.kill(status);
+        }
         // convenience function for client-side redirects
         // make sure you call res.kill() with a 301, 302, 401, or related status code
         res['redirect'] = function(path) {
@@ -54,7 +64,7 @@ function handleApi(req, res) {
                 res.response.meta.ajaxiframe_id = fields.ajaxiframe_id
 
                 response = JSON.stringify(res.response);
-                response = "<script type='text/javascript'>parent.fin.util.handleJsonp(" + response + ")</script>"
+                response = "<script type='text/javascript'>parent.fin.handleJsonp(" + response + ")</script>"
             } else {
                 // regular responses are sent as json
                 response = JSON.stringify(res.response);

@@ -2,7 +2,7 @@
 GLOBAL - BOOTSTRAP
 ------------------------------------------------------------------------------------------*/
 /*
-	// global log function, for consistency with clientside code
+    // global log function, for consistency with clientside code
 */
 log = function log() {
     if(typeof console !== 'undefined') {
@@ -11,18 +11,13 @@ log = function log() {
 }
 
 /*
-	// global error handler
-	// process will still crash, but we can do stuff after it crashes, like send an email or log it to a dashboard or something
+    // global error handler
+    // process will still crash, but we can do stuff after it crashes, like send an email or log it to a dashboard or something
 */
-process.on('uncaughtException', function(e) {
-    // something
-    try {
-        log(e);  
-
-    } catch (err) {
-        //uggg
-    }
-})
+// process.on('uncaughtException', function(e) {
+//     // something
+//    log(e.stack)
+// })
 
 
     
@@ -32,14 +27,19 @@ tail = {
         // used for storing application functions. ie: controllers and public models in MVC
         // typically not defined here.
     },
+    db: require('./tail/goldfish'),
+    flow: require('./tail/flow'),
     util: {          
         /*
         extend an object, can be used as clone by specifying a a new blank object in the first param, and the object to clone in in the second
         */
+        // todo: should use fin's extend method here when we can share code between fe and be better.
         extend: function extend(obj) {
             Array.prototype.slice.call(arguments, 1).forEach(function(source) {
                 if (source) {
                     for (var prop in source) {
+                        if (source[prop] === null) continue
+                
                         if (source[prop].constructor === Object) {
                             if (!obj[prop] || obj[prop].constructor === Object) {
                                 obj[prop] = obj[prop] || {};
@@ -57,12 +57,12 @@ tail = {
         },
 
         /*
-			strip html tags
-			note: if b is specified as an allowable tag, it will preserve <b></b> tags, but will remove tag params ie: <b onclick="javascript()">bold text</b> 
-					will be converted into <b>bold text</b>, this prevents javascript injection in allowable tags
-			@input - html string
-			@allowed "b,i", comma separated string of alloweable tags
-		*/
+            strip html tags
+            note: if b is specified as an allowable tag, it will preserve <b></b> tags, but will remove tag params ie: <b onclick="javascript()">bold text</b> 
+                    will be converted into <b>bold text</b>, this prevents javascript injection in allowable tags
+            @input - html string
+            @allowed "b,i", comma separated string of alloweable tags
+        */
         strip_tags: function strip_tags(input, allowed) {
             if (input == undefined) {
                 return "";
@@ -87,8 +87,8 @@ tail = {
             return input
         },
         /*
-			fast trim for leading and trailing whitespace
-		*/
+            fast trim for leading and trailing whitespace
+        */
         trim: function trim(str) {
             str = str.replace(/^\s+/, '');
             for (var i = str.length - 1; i >= 0; i--) {
@@ -100,10 +100,10 @@ tail = {
             return str;
         },
         /*
-			// validate specific data types		
-			@data - the data to validate
-			@type - the validator to use
-		*/
+            // validate specific data types     
+            @data - the data to validate
+            @type - the validator to use
+        */
         validate: function validate(data, type) {
             if (typeof data === 'undefined') {
                 return false
@@ -127,13 +127,13 @@ tail = {
             }
         },
         /*
-			validation
-		*/
+            validation
+        */
 
         /*
-			// get the current time as either a timestamp or UTC datestamp
-			@type - "time" or "date"
-		*/
+            // get the current time as either a timestamp or UTC datestamp
+            @type - "time" or "date"
+        */
         currentTime: function currentTime(type) {
             switch (type) {
                 case "time":
