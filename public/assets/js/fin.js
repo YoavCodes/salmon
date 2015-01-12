@@ -331,7 +331,7 @@ var fin = function fin(obj_path, object){
 		if findings.results.length > 0, then use it, otherwise use findings.val
 
 		*/
-		results: function(sort_by) {			
+		results: function(sort_by) {									
 			if(sort_by === "sortByDate") {
 				return this.getResults( this.sort() );	
 			} else if(typeof sort_by === 'function') {
@@ -341,7 +341,7 @@ var fin = function fin(obj_path, object){
 			}
 		},
 
-		result: function() {		
+		result: function() {					
 			return this.getResults( [this.val] );
 		},
 
@@ -349,21 +349,21 @@ var fin = function fin(obj_path, object){
 			// create data structure			
 			var results = {};			
 			
-			function buildTree(dot_path, val) {
+			function buildTree(dot_path, val) {				
 				// build tree				
-				var dot_path_array = dot_path.split('.');	
+				var dot_path_array = dot_path.split('.');					
 				var key = dot_path_array.shift()
-				if(dot_path_array.length > 0) {
+				if(dot_path_array.length > 0) {					
 					results[ key ] = results[ key ] || {}
-				}	else {
+				}	else {					
 					results[ key ] = val						 
 				}	
 				var path = results[ key ];
-
+					
 				for(var i=0; i<dot_path_array.length; i++) {						
-					if(i === dot_path_array.length-1) {		
+					if(i === dot_path_array.length-1) {								
 						path = path[dot_path_array[i]] = val;	
-					} else {		
+					} else {								
 						path = path[dot_path_array[i]] = {};
 					}						
 				}
@@ -372,7 +372,7 @@ var fin = function fin(obj_path, object){
 				return path;
 			}
 
-			for(var i=0; i<sorted_array.length; i++) {
+			for(var i=0; i<sorted_array.length; i++) {				
 				
 				var key = this.last_key + "." + sorted_array[i].rowid
 				
@@ -380,13 +380,13 @@ var fin = function fin(obj_path, object){
 				
 				// resolve dot references, todo: use schema to find dot reference values and dotreference arrays
 				// build a proper recursive function
-				for(var prop in sorted_array[i]) {
+				for(var prop in sorted_array[i]) {					
 					if(typeof sorted_array[i][prop] === 'string' && sorted_array[i][prop].substr(0, 2) === '--' ) {
 						var dot_ref = sorted_array[i][prop].substr(2);
 						buildTree(dot_ref, fin(dot_ref).val);
 						
 					}
-				}
+				}				
 			}
 			return results;
 		},
@@ -426,7 +426,7 @@ var fin = function fin(obj_path, object){
 		}
 
 		// loop for iterating through object, following dot.paths
-		var value;
+		//var value;
 		if(path.length > 0) {
 			 
 			findings.val = path[0];
@@ -510,13 +510,13 @@ var fin = function fin(obj_path, object){
 	return dot(obj_path, object, findings);
 };
 
-
 // alias for fin() when directly accessing the data model.
 // instead of fin('fin.data.posts').find(11).get('title')
 // can do fin.db('posts').find(11).get('title')
 fin.db = function(obj_path) {			
 	return fin(obj_path, fin.data);
 }
+
 
 // settings and defaults
 fin.settings = $.extend(true, {}, {		
