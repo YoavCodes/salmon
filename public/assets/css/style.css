@@ -1,3 +1,17 @@
-#test {
-  display: none;
+*,
+html,
+body {
+  background-color: #222;
+}
+#message {
+  width: 800px;
+  margin: 40px 0 0 140px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 60px;
+  font-weight: bold;
+  color: #fff;
+}
+.grey {
+  color: #666;
+  font-size: 12px;
 }
