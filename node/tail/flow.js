@@ -136,9 +136,9 @@ var flow = {
     },
 
     parallel: function () {
-    	if (arguments.length === 0) return;
+        if (arguments.length === 0) return;
 
-    	var tasks = Array.prototype.slice.call(arguments, 0);
+        var tasks = Array.prototype.slice.call(arguments, 0);
         var _graph = new Graph();
 
         _graph.setFinalCallback(tasks.pop());
@@ -152,16 +152,16 @@ var flow = {
     },
 
     series: function () {
-    	if (arguments.length === 0) return;
-    	
-    	var tasks = Array.prototype.slice.call(arguments, 0);
+        if (arguments.length === 0) return;
+        
+        var tasks = Array.prototype.slice.call(arguments, 0);
 
         var _graph = new Graph();
 
         // Add all tasks to graph
         var previous = null;
         for (var i in tasks) {
-        	var task = tasks[i];
+            var task = tasks[i];
             // Set task dependency to previous task            
             if (previous)
                 task.dependencies = [previous];

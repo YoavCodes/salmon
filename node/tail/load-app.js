@@ -13,7 +13,7 @@ function loadServerCode() {
             var object_branch = tail.app;
 
             for (var j = 0; j < object_path_array.length; j++) {
-                if (j === object_path_array.length - 1) {
+                if (j === object_path_array.length - 1) {                    
                     object_branch[object_path_array[j]] = require(root_path + file_name)
                 } else {
                     if (typeof object_branch[object_path_array[j]] === 'undefined') {
