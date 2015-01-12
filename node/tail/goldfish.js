@@ -4,12 +4,14 @@
 var fs = require('fs');
 var _data = {
 	collections: {},
+	schema: {},
 	info: {}
 };
 var changed = false;
 var is_writing = false;
 var schema; // schema is defined in your app.. maybe
 var db; // exported db object
+var isServer = true;
 
 function load() {
 	try {		
@@ -47,11 +49,55 @@ function init() {
 	setInterval(save, 1000)
 }
 
+/* types */
+// In the schema every type has a '__type' and a '___default'. in some cases the __default represents something else.
+/*
+	Valid Types
+	string, number, boolean, array, and object are all valid and take a default. In most cases you would use an object literal instead of
+	the object type in the schema. In addition there are some special types:
+	
+	collection Type: 
+		a special object (where every key is an auto incrementing id and every value is a document)
+		its default describes the schema of it's documents
+	ref Type:
+		a dot key reference. eg: the author field of a blog post may point to '--users.1'
+		its default describes the dotreference prefix eg: '--users'. this way the value stored in the database is only "1" saving space
+		and simplifying migrations if we ever change the name of the users collection, we only have to change it in the schema for ref Types
+		instead of each record.
+	ref_array Type:
+		an array of refs
+		its default is the same as the ref Type's default
+*/ 
+function type(type, __default, __private){
+	// string, number, boolean, array, object
+	var item = {'__type': type, '__default': __default};
+	
+	if(__private === true) {
+		item.__private = true;
+	}
+	return item;
+}
+// type aliases for cleaner code.
+type.collection = function (__default, __private) { return type('collection',   __default, __private); };
+type.ref 		= function (__default, __private) { return type('ref', 			__default, __private); };
+type.ref_array  = function (__default, __private) { return type('ref_array', 	__default, __private); };
+type.string 	= function (__default, __private) { return type('string', 		__default, __private); };
+type.number 	= function (__default, __private) { return type('number', 		__default, __private); };
+type.boolean 	= function (__default, __private) { return type('boolean', 		__default, __private); };
+type.array 	 	= function (__default, __private) { return type('array', 		__default, __private); };
+type.object 	= function (__default, __private) { return type('object', 		__default, __private); };
+
+// database will already have init()ed
+function setSchema(new_schema) {
+	var current_schema = _data.schema;
+	// todo: migrate collections from old schema to new schema
+	_data.schema = new_schema;
+	changed = true;
+}
 
 
 
-
-var fin = function fin(obj_path, object){
+function fin(obj_path, object, create_nodes){
 
 	if(obj_path === null || typeof obj_path === "undefined") {
 		obj_path = "";
@@ -78,9 +124,12 @@ var fin = function fin(obj_path, object){
 		val: void 0, // the final value of the property specified in obj_path, after following the dotkey chain		
 		// manipulating values/properties that store the first dotkey before following the chain
 		key: "", // if the value of obj_path is a dotkey, store the dotkey string here. we only care about the dotkey at the original obj_path. not the rest in the chain		
+		schema: _data.schema, // keep track of the schema of the current node.
+		schema_type: '',
 		last_key: obj_path, // last_key keeps track of the last dotkey reference followed. it's a direct reference to the object in val
 		last_insert_id: void 0, // chaining calls after insert can access the row id
-		create_nodes: false, // toggle to true to create object nodes if they don't exist, useful for saving data to the model.
+		create_nodes: create_nodes || false, // toggle to true to create object nodes if they don't exist, useful for saving data to the model.
+		select: [],// allow selecting an array of properties. used in results and result calls
 		/*
 			return findings
 		*/
@@ -104,7 +153,8 @@ var fin = function fin(obj_path, object){
 		*/
 		// narrow down findings
 		find: function(dot_path) {
-			return fin(dot_path, findings.val);
+			dot_path = obj_path + "." + dot_path;
+			return fin(dot_path);
 		},		
 		// returns the value of a subnode without modifying our current findings object
 		get: function(dot_path) {			
@@ -116,12 +166,16 @@ var fin = function fin(obj_path, object){
 		// note: because get() changes the value of .val without changing any of the other findings properties
 		// it's only useful just before calling .result(), so .result() is called for you
 		// if you want the record itself use find('1').val instead.
-		getResult: function(dot_path) {
-			this.val = fin(dot_path, findings.val).val;
-			return this.result();
+		getResult: function(dot_path) {		
+			return fin(this.last_key +'.'+dot_path).result();
+		},
+		createNodes: function() {
+			this.create_nodes = true;
+			return findings;
 		},
 		// set a new value
 		set: function(new_value, follow_dotkeys) {
+			this.create_nodes = true;
 			dot(obj_path, object, findings, false, new_value, follow_dotkeys);
 			changed = true
 			return findings;
@@ -133,21 +187,30 @@ var fin = function fin(obj_path, object){
 		},
 		// adds a child document to a collection
 		insert: function(child) {
-			if(this.val)
+			
 			// get nextid
 			// todo: race condition, create database lock mechanism that prevents inserting a child of a collection
 			// while an insert is taking place. maybe store it in info __insert_lock
-			var __index = fin(this.last_key, _data.info).find('index');
+			
+			var __index = fin(this.last_key, _data.info).find('index');			
+			if(typeof __index.val === 'undefined') {				
+				__index = fin(this.last_key+'.index', _data.info, true).set(0)
+			}
+			
 			var id = (parseInt(__index.val, 10) || 0) + 1;
+			
 			__index.set(id);
 
 			child.rowid = id.toString();
+			var _findings = fin(obj_path, object, true)
 
-			this.val[id] = child;
+			_findings.val[id] = child;
 
-			this.last_insert_id = id;
+			_findings.last_insert_id = id;
 			changed = true;
-			return findings;
+			
+			return _findings;
+
 		},
 		// get the item we just inserted
 		inserted_child: function() {
@@ -334,24 +397,48 @@ var fin = function fin(obj_path, object){
 			return this.getResults( [this.val] );
 		},
 
-		getResults: function(sorted_array) {						
-			// create data structure			
-			var results = {};			
+		/// returns a clone of the data.
+		getResults: function(sorted_array) {	
+			// create data structure	
+			for(var s=0; s<sorted_array.length; s++) {
+				if(sorted_array[s].constructor === Object) {
+					sorted_array[s] = tail.util.extend({}, sorted_array[s]);
+				}
+			}		
+			var results = {};	
+			var schema = this.schema;	
+			var prop_schema = schema;
+			var dot_paths = []; // prevent circular references	
+			var key;
 			
 			function buildTree(dot_path, val) {
+				if(dot_paths.indexOf(dot_path) > -1) {
+					// already built this tree
+					return null
+				} else {
+					dot_paths.push(dot_path);
+				}
 				// build tree				
 				var dot_path_array = dot_path.split('.');	
 				var key = dot_path_array.shift()
 				if(dot_path_array.length > 0) {
 					results[ key ] = results[ key ] || {}
-				}	else {
-					results[ key ] = val						 
+				} else {
+					if(val.constructor === Object) {
+						results[ key ] = tail.util.extend({}, val);
+					} else {
+						results[ key ] = val						 
+					}
 				}	
 				var path = results[ key ];
 
 				for(var i=0; i<dot_path_array.length; i++) {						
-					if(i === dot_path_array.length-1) {		
-						path = path[dot_path_array[i]] = val;	
+					if(i === dot_path_array.length-1) {	
+						if(typeof val !== 'undefined' && val.constructor === Object) {
+							path = path[dot_path_array[i]] = tail.util.extend({}, val);
+						} else {	
+							path = path[dot_path_array[i]] = val;	
+						}
 					} else {		
 						path = path[dot_path_array[i]] = {};
 					}						
@@ -361,24 +448,57 @@ var fin = function fin(obj_path, object){
 				return path;
 			}
 
-			for(var i=0; i<sorted_array.length; i++) {
-				
-				var key = this.last_key + "." + sorted_array[i].rowid
-				
-				buildTree(key, sorted_array[i])
-				
-				// resolve dot references, todo: use schema to find dot reference values and dotreference arrays
-				// build a proper recursive function
-				for(var prop in sorted_array[i]) {
-					if(typeof sorted_array[i][prop] === 'string' && sorted_array[i][prop].substr(0, 2) === '--' ) {
-						var dot_ref = sorted_array[i][prop].substr(2);
-						buildTree(dot_ref, fin(dot_ref).val);
-						
+
+			function resolveRefs(document, schema) {				
+				var refs = []
+				var ref;
+				for(var prop in document) {	
+					if(typeof schema === 'undefined') {
+						continue
+					}				
+					prop_schema = schema.__default[prop];
+					if(typeof prop_schema !== 'undefined' && prop_schema.__private === true) {
+						delete document[prop];
+						continue;
+					}
+					
+					if(typeof prop_schema !== 'undefined' && prop_schema.__type === 'ref') {
+						refs = [document[prop]];
+					} else if(typeof prop_schema !== 'undefined' && prop_schema.__type === 'ref_array') {
+						refs = document[prop];
+					}
+					for(var r=0; r<refs.length; r++) {		
+						ref = refs[r];				
+						var dot_ref = prop_schema.__default.substr(2) + '.' + ref;
+						if(prop_schema.__type === 'ref') {
+							document[prop] = '--'+dot_ref;
+						} else if(prop_schema.__type === 'ref_array') {
+							document[prop][r] = '--'+dot_ref;
+						}
+						var resolved_document = buildTree(dot_ref, fin(dot_ref).val);						
+						// todo: replace _data.schema[prop_schema.__default.substr(2)] with a function or special call to fin()
+						// that can traverse the schema to support dot references multiple levels deep.
+						resolveRefs(resolved_document, _data.schema[prop_schema.__default.substr(2)]); // recurse
 					}
 				}
 			}
+
+
+			for(var i=0; i<sorted_array.length; i++) {
+				if(typeof this.schema !== 'undefined' && this.schema_type === 'collection') {
+					key = this.last_key + "." + sorted_array[i].rowid 
+				} else {
+					key = this.last_key;
+				}
+				
+				var path = buildTree(key, sorted_array[i])
+				
+				resolveRefs(path, schema)
+			}
 			return results;
 		},
+
+
 
 
 		// sort results by comparing dates. 
@@ -414,14 +534,47 @@ var fin = function fin(obj_path, object){
 			path.unshift(object);
 		}
 		// loop for iterating through object, following dot.paths
-		var value;
+		//var value;
 		if(path.length > 0) {
 			 
-			findings.val = path[0];
-
+			findings.val = path[0];			
 			for(var i=1; i < path.length; i++) {
 				var path_i = path[i];
+
 				var findings_val_path_i = findings.val[path_i];
+
+				if(isServer === true && typeof findings.schema !== 'undefined') {
+					//findings.schema_type = findings.schema.__type;
+					if(findings.schema_type === 'collection') {
+						// if the parent of this node is a collection
+						// set this type to document
+						findings.schema_type = 'document'
+					} else if (findings.schema_type === 'document' && typeof findings.schema.__default !== 'undefined') {
+						// get the schema via document schema
+						findings.schema = findings.schema.__default[path_i];
+						findings.schema_type = findings.schema.__type;
+					} else {
+						// no parent type, likely top of schema tree
+						findings.schema = findings.schema[path_i];
+						if(typeof findings.schema !== 'undefined') {
+							findings.schema_type = findings.schema.__type;
+						}
+					}
+					if(typeof findings.schema !== 'undefined') {
+						// now that schema has been set for this node
+						if(findings.schema.__type === 'ref') {
+							findings_val_path_i = findings.schema.__default + '.' + findings_val_path_i						
+						} else if(findings.schema.__type === 'ref_array') {
+							for(var k=0; k<findings.val.length; k++) {
+								findings_val_path_i[k] = findings.schema.__default + '.' + findings_val_path_i[k];
+							}
+						}
+					}
+
+
+
+				} 
+
 				var next_i = i+1;
 				if(typeof findings_val_path_i === 'undefined') {
 					// create a blank node if the key doesn't exist.. if we're trying to access it, it means we want it to exist
@@ -439,7 +592,7 @@ var fin = function fin(obj_path, object){
 				// check if it's a dot.key
 				if(typeof findings_val_path_i === 'string' && findings_val_path_i.substr(0, 2) === "__" ||
 					typeof findings_val_path_i === 'string' && findings_val_path_i.substr(0, 2) === "--") {
-					var dot_string = findings_val_path_i.substring(2);	
+					var dot_string = findings_val_path_i//.substring(2);	
 					// if findings.val is a dot string save it in findings.key
 					// note: since we only return the original findings, this will only represent the first dot.string at the obj_path value					
 					findings.key = dot_string;	
@@ -499,14 +652,15 @@ var fin = function fin(obj_path, object){
 	return dot(obj_path, object, findings);
 };
 
+// exports
+var fin = fin;
+
+fin.init = init;
+fin.type = type;
+fin.setSchema = setSchema;
 fin.save = function() {
 	changed = true;
 }
-
-
-init();
-
-
 
 
 module.exports = fin;
