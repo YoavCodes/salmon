@@ -118,7 +118,8 @@ var flow = {
 
     // Helper for adding dependencies to task
     runAfter: function (dependencies, task) {                        
-        return task.dependencies = dependencies;
+        task.dependencies = dependencies;
+        return task;
     },
 
     // Creates a graph from tasks array and run it
